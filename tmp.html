@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Senior Developer's Interactive Roadmap</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+        .content-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .expand-button {
+            transition: transform 0.3s ease;
+        }
+        .details.open .expand-button {
+            transform: rotate(45deg);
+        }
+        .details-content {
+            display: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s ease-in-out;
+        }
+        .details.open .details-content {
+            display: block;
+            max-height: 5000px;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 450px;
+        }
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .flow-item {
+            background-color: #eef2ff;
+            color: #4338ca;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            border: 1px solid #c7d2fe;
+            width: 80%;
+        }
+        .flow-arrow {
+            color: #9ca3af;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .resource-link {
+            display: inline-block;
+            margin-top: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            background-color: #dbeafe;
+            color: #1e40af;
+            border-radius: 9999px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        .resource-link:hover {
+            background-color: #bfdbfe;
+        }
+        @media (min-width: 1024px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl md:text-2xl font-bold text-gray-800">Senior Developer Roadmap</h1>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#part1" class="nav-link font-medium text-gray-600 pb-1">1. Strategy</a>
+                    <a href="#part2" class="nav-link font-medium text-gray-600 pb-1">2. Patterns</a>
+                    <a href="#part3" class="nav-link font-medium text-gray-600 pb-1">3. Tech Stack</a>
+                    <a href="#part4" class="nav-link font-medium text-gray-600 pb-1">4. Operations</a>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="#part1">1. Strategy</option>
+                        <option value="#part2">2. Patterns</option>
+                        <option value="#part3">3. Tech Stack</option>
+                        <option value="#part4">4. Operations</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900">From Code to Cloud Architecture</h2>
+            <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">This interactive application contains the complete Senior Developer Roadmap. Click on any chapter title to expand it and explore the detailed content, diagrams, and learning resources.</p>
+        </div>
+
+        <section id="part1" class="mb-16 scroll-mt-20">
+            <h3 class="text-3xl font-bold text-gray-800 mb-6">Part I: The Strategic Foundation</h3>
+            <p class="text-lg text-gray-600 mb-8">This first section covers the essential mindset and high-level architectural thinking required for senior roles. It's about understanding the "why" before the "what"—analyzing the business problem, defining boundaries with Domain-Driven Design, and choosing the right architectural style. Master these concepts to build systems that are truly aligned with business goals.</p>
+            <div class="space-y-6">
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 1: Domain-Driven Design (DDD)</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p><strong>Introduction:</strong> DDD is an approach that centers software development on a deep understanding of the business domain. It provides a structured way to manage complexity and ensure the software is a true reflection of the business it serves.</p>
+                        <h5 class="font-semibold text-lg">The Two Pillars of DDD: Strategic and Tactical Design</h5>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Strategic DDD:</strong> Concerned with the macro-architecture. It provides tools for analyzing the business domain, breaking it down into manageable parts (Bounded Contexts), and defining the high-level relationships between them.</li>
+                            <li><strong>Tactical DDD:</strong> Focuses on the micro-architecture. It offers a rich set of building-block patterns (Aggregates, Entities) for designing the objects and components within a single Bounded Context.</li>
+                        </ul>
+                        <h5 class="font-semibold text-lg">Strategic DDD: Charting the Business Landscape</h5>
+                        <p><strong>Ubiquitous Language:</strong> A shared, rigorous language developed by the team and domain experts. It must be used consistently in all communication and in the code itself to eliminate ambiguity.</p>
+                        <p><strong>Bounded Context:</strong> The core strategic pattern. A Bounded Context is an explicit boundary within which a specific domain model is consistent. Identifying these boundaries is the most reliable method for defining well-designed microservices.</p>
+                        <p><strong>Context Mapping:</strong> A visualization of the relationships between Bounded Contexts, using patterns like Anticorruption Layer (ACL), Shared Kernel, and Customer/Supplier to manage integrations.</p>
+                        <div>
+                            <a href="https://www.youtube.com/watch?v=g_h6d6j1qIs" target="_blank" class="resource-link">▶️ Watch: What is DDD - Eric Evans</a>
+                            <a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank" class="resource-link">📄 Read: BoundedContext by Martin Fowler</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 2: Choosing Your Architectural Style</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <h5 class="font-semibold text-lg">Microservices Architecture</h5>
+                        <p>An approach to developing an application as a suite of small, independently deployable services, each built around a business capability. Key characteristics include decentralized data management, organization around business capabilities, and designing for failure.</p>
+                        <h5 class="font-semibold text-lg">Event-Driven Architecture (EDA)</h5>
+                        <p>A paradigm built around producing, detecting, and consuming events. Components are loosely coupled and communicate asynchronously, making systems highly scalable and resilient. It's a natural fit for microservices.</p>
+                        <h5 class="font-semibold text-lg">Foundational Patterns for Domain Isolation</h5>
+                        <p>These patterns structure the code *within* a service to protect business logic from external dependencies.</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Hexagonal Architecture (Ports & Adapters):</strong> The core logic defines 'ports' (interfaces). External technologies are 'adapters' that implement these ports, allowing the core to be tested in isolation.</li>
+                            <li><strong>Clean Architecture:</strong> Organizes the system in concentric layers with a strict "Dependency Rule" where all dependencies point inwards, toward the core business rules.</li>
+                        </ul>
+                         <div>
+                            <a href="https://www.youtube.com/watch?v=C_T4_G_I-74" target="_blank" class="resource-link">▶️ Watch: GOTO 2018 • The Principles of Clean Architecture</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="part2" class="mb-16 scroll-mt-20">
+            <h3 class="text-3xl font-bold text-gray-800 mb-6">Part II: Advanced Patterns for Resilient Systems</h3>
+            <p class="text-lg text-gray-600 mb-8">This section dives into the specific, advanced patterns required to build the internal logic of modern services. Here you'll find solutions for critical challenges like data consistency across services (SAGA), optimizing data access (CQRS), and managing state changes over time (Event Sourcing). Mastering these patterns is a hallmark of a senior developer.</p>
+            <div class="space-y-6">
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 3: Tactical DDD: Implementing the Domain Model</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p>Tactical DDD provides the building blocks for designing a rich domain model within a Bounded Context.</p>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><strong>Entities vs. Value Objects:</strong> An Entity has a unique identity and lifecycle (e.g., a `Customer`). A Value Object is defined by its attributes and is immutable (e.g., an `Address`).</li>
+                            <li><strong>Aggregates:</strong> A cluster of domain objects treated as a single unit for data changes. The Aggregate Root is the single entry point and enforces business rules (invariants).</li>
+                            <li><strong>Rules for Aggregate Design:</strong> 1) Design small aggregates. 2) Reference other aggregates by ID only. 3) Modify one aggregate per transaction. 4) Use eventual consistency outside the boundary.</li>
+                            <li><strong>Repositories:</strong> Provide the illusion of an in-memory collection of Aggregates, decoupling the domain from persistence.</li>
+                            <li><strong>Domain Events:</strong> An immutable record of something significant that happened in the domain (e.g., `OrderShippedEvent`).</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 4: Mastering Data with CQRS and Event Sourcing</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <h5 class="font-semibold text-lg">CQRS (Command Query Responsibility Segregation)</h5>
+                        <p>A pattern that separates the model for updating data (Commands) from the model for reading data (Queries). This allows for independent optimization and scaling of reads and writes.</p>
+                        <div class="p-4 bg-gray-50 rounded-lg my-4">
+                            <h6 class="font-bold text-center mb-2">Visualizing the CQRS Flow</h6>
+                            <div class="flex flex-col md:flex-row justify-center items-center gap-4 text-center text-sm">
+                                <div class="p-3 bg-blue-100 border border-blue-200 rounded-lg"><strong>1. Command</strong><br/>(e.g., `UpdateUserAddress`)</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="p-3 bg-indigo-100 border border-indigo-200 rounded-lg"><strong>2. Command Handler</strong><br/>(Validates & processes)</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="p-3 bg-purple-100 border border-purple-200 rounded-lg"><strong>3. Event Produced</strong><br/>(e.g., `UserAddressUpdated`)</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="p-3 bg-green-100 border border-green-200 rounded-lg"><strong>4. Event Handler</strong><br/>(Updates read model)</div>
+                            </div>
+                        </div>
+                        <h5 class="font-semibold text-lg">Event Sourcing (ES)</h5>
+                        <p>Instead of storing only the current state, you store the full sequence of immutable events that have ever affected an entity. The current state is derived by replaying these events. This provides a full, auditable history of every change.</p>
+                        <div>
+                            <a href="https://www.youtube.com/watch?v=JHGkaShoyNs" target="_blank" class="resource-link">▶️ Watch: CQRS and Event Sourcing by Greg Young</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 5: The SAGA Pattern</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                         <p>The SAGA pattern manages data consistency across multiple services without using blocking distributed transactions. It is a sequence of local transactions with corresponding compensating actions for failures.</p>
+                         <h5 class="font-semibold text-lg">Two Coordination Models</h5>
+                         <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <h6 class="font-bold text-center mb-2">Choreography (Event-Driven)</h6>
+                                <p class="text-xs text-center mb-3">Services communicate via events without a central controller.</p>
+                                <div class="flow-diagram text-xs">
+                                    <div class="flow-item">Order Service: `OrderCreated` Event</div>
+                                    <div class="flow-arrow">↓</div>
+                                    <div class="flow-item">Payment Service: Consumes `OrderCreated`, Publishes `PaymentProcessed`</div>
+                                    <div class="flow-arrow">↓</div>
+                                    <div class="flow-item">Inventory Service: Consumes `PaymentProcessed`</div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <h6 class="font-bold text-center mb-2">Orchestration (Centralized)</h6>
+                                <p class="text-xs text-center mb-3">A central orchestrator directs the services.</p>
+                                <div class="flow-diagram text-xs">
+                                    <div class="flow-item bg-blue-100">Order Orchestrator</div>
+                                    <div class="flow-arrow">↓ (Command)</div>
+                                    <div class="flow-item">Payment Service</div>
+                                    <div class="flow-arrow">↑ (Reply)</div>
+                                    <div class="flow-item bg-blue-100">Order Orchestrator</div>
+                                    <div class="flow-arrow">↓ (Command)</div>
+                                    <div class="flow-item">Inventory Service</div>
+                                </div>
+                            </div>
+                         </div>
+                         <div>
+                            <a href="https://microservices.io/patterns/data/saga.html" target="_blank" class="resource-link">📄 Read: Pattern: Saga</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 6: The Mediator Pattern</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p>The Mediator pattern solves the problem of complex, many-to-many dependencies between objects *within a single service*. It introduces a central mediator object that encapsulates all interaction logic, promoting loose coupling. The other objects (Colleagues) only communicate with the Mediator, not with each other.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="part3" class="mb-16 scroll-mt-20">
+            <h3 class="text-3xl font-bold text-gray-800 mb-6">Part III: The Technology Stack</h3>
+            <p class="text-lg text-gray-600 mb-8">This section transitions from abstract patterns to the concrete tools and frameworks you'll use to implement them. We'll explore the Spring Cloud ecosystem for building microservices, specialized frameworks like Axon for CQRS, and the critical choice of messaging systems like Kafka and RabbitMQ.</p>
+            <div class="space-y-6">
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 7: The Spring Cloud Toolkit</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p>A suite of tools for common patterns in distributed systems:</p>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><strong>Service Discovery (Eureka):</strong> Helps services find each other dynamically.</li>
+                            <li><strong>API Gateway (Spring Cloud Gateway):</strong> Single entry point for routing, auth, and rate limiting.</li>
+                            <li><strong>Configuration (Spring Cloud Config):</strong> Centralized configuration management.</li>
+                            <li><strong>Fault Tolerance (Resilience4j):</strong> Implements patterns like Circuit Breaker to prevent cascading failures.</li>
+                        </ul>
+                         <div>
+                            <a href="https://spring.io/projects/spring-cloud" target="_blank" class="resource-link">📄 Read: Spring Cloud Official Docs</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 8: The Axon Framework</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p>A specialized Java framework purpose-built for applications that follow DDD, CQRS, and Event Sourcing patterns. It provides annotations and building blocks (`@Aggregate`, `CommandGateway`, `EventStore`) that dramatically accelerate development by handling the complex plumbing code for you.</p>
+                    </div>
+                </div>
+                <div class="content-card p-6">
+                    <h4 class="text-xl font-bold mb-4 text-center">Chapter 9: Messaging Systems: Kafka vs. RabbitMQ</h4>
+                    <div class="chart-container">
+                        <canvas id="messagingChart"></canvas>
+                    </div>
+                    <p class="text-center mt-4 text-gray-600">The choice of message broker is a critical architectural decision. The chart above illustrates a key trade-off: Kafka's log-based architecture gives it superior throughput for high-volume data streams, while RabbitMQ's smart routing excels in complex messaging scenarios. Click the chapter title below to expand the full comparison table.</p>
+                    <div class="details mt-4">
+                        <div class="cursor-pointer text-center text-blue-600 font-semibold" data-toggle>Show/Hide Comparison Details</div>
+                        <div class="details-content mt-4 overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-500">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">Criterion</th>
+                                        <th scope="col" class="px-6 py-3">Apache Kafka</th>
+                                        <th scope="col" class="px-6 py-3">RabbitMQ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="bg-white border-b"><td class="px-6 py-4 font-medium">Model</td><td class="px-6 py-4">Event Streaming Platform</td><td class="px-6 py-4">Message Broker</td></tr>
+                                    <tr class="bg-gray-50 border-b"><td class="px-6 py-4 font-medium">Retention</td><td class="px-6 py-4">Durable, Replayable</td><td class="px-6 py-4">Transient</td></tr>
+                                    <tr class="bg-white border-b"><td class="px-6 py-4 font-medium">Routing</td><td class="px-6 py-4">Simple (Dumb Broker)</td><td class="px-6 py-4">Complex (Smart Broker)</td></tr>
+                                    <tr class="bg-gray-50"><td class="px-6 py-4 font-medium">Use Case</td><td class="px-6 py-4">Event Sourcing, Data Pipelines</td><td class="px-6 py-4">Task Queues, Complex Routing</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="part4" class="scroll-mt-20">
+            <h3 class="text-3xl font-bold text-gray-800 mb-6">Part IV: Operations & Deployment</h3>
+            <p class="text-lg text-gray-600 mb-8">A senior developer's responsibility extends to the entire application lifecycle. This final section covers the crucial "DevOps" aspects of packaging, deploying, managing, and observing systems in production. This includes containerization with Docker and Kubernetes, automation with CI/CD, and the three pillars of observability.</p>
+            <div class="space-y-6">
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 10: The Universal Runtime: Docker & Kubernetes</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p><strong>Docker:</strong> Packages an application and its dependencies into a portable container, ensuring it runs consistently everywhere.</p>
+                        <p><strong>Kubernetes:</strong> The de facto standard for orchestrating containers at scale, providing self-healing, automated rollouts, and service discovery.</p>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 11: Automation: CI/CD & Infrastructure as Code</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p><strong>CI/CD (Continuous Integration/Deployment):</strong> Each microservice must have its own isolated pipeline that automatically builds, tests, and deploys a versioned Docker image.</p>
+                        <div class="p-4 bg-gray-50 rounded-lg my-4">
+                             <h6 class="font-bold text-center mb-2">CI/CD Pipeline Flow</h6>
+                             <div class="flex flex-col md:flex-row justify-center items-center gap-2 text-center text-xs">
+                                <div class="p-2 bg-gray-200 rounded-lg">Code Commit</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="p-2 bg-blue-100 rounded-lg">Build & Unit Test</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="p-2 bg-indigo-100 rounded-lg">Create Docker Image</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="p-2 bg-purple-100 rounded-lg">Integration Test</div>
+                                <div class="flow-arrow">→</div>
+                                <div class="p-2 bg-green-100 rounded-lg">Deploy to Prod</div>
+                             </div>
+                        </div>
+                        <p><strong>IaC (Infrastructure as Code) (e.g., Terraform):</strong> Manages infrastructure (clusters, databases) with version-controlled code, making deployments safe and repeatable.</p>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 12: Deploying to the Cloud: AWS, Azure & GCP</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                         <p>The major cloud providers offer a spectrum of services, from full control to fully managed.</p>
+                         <ul class="list-disc list-inside space-y-2">
+                            <li><strong>AWS:</strong> Amazon EKS (managed Kubernetes), Amazon ECS with Fargate (serverless containers).</li>
+                            <li><strong>Azure:</strong> Azure Kubernetes Service (AKS), Azure Spring Apps (fully managed PaaS for Spring).</li>
+                            <li><strong>GCP:</strong> Google Kubernetes Engine (GKE), Google Cloud Run (serverless containers with scale-to-zero).</li>
+                         </ul>
+                    </div>
+                </div>
+                <div class="content-card details">
+                    <div class="p-6 cursor-pointer flex justify-between items-center" data-toggle>
+                        <h4 class="text-xl font-bold">Chapter 13: Observability: The Three Pillars</h4>
+                        <div class="expand-button text-2xl text-blue-500 font-light">+</div>
+                    </div>
+                    <div class="details-content px-6 pb-6 text-gray-700 space-y-4">
+                        <p>Observability is the ability to ask arbitrary questions about your system's internal state to debug "unknown unknowns". It is built on three pillars:</p>
+                        <ol class="list-decimal list-inside space-y-2">
+                            <li><strong>Logging:</strong> Structured, centralized logs (e.g., ELK, Splunk) to record discrete events.</li>
+                            <li><strong>Metrics:</strong> Aggregated numerical data (e.g., Prometheus, Grafana) to track trends and alert on anomalies.</li>
+                            <li><strong>Distributed Tracing:</strong> Traces the path of a request across services (e.g., Jaeger, Zipkin) to pinpoint bottlenecks and failures.</li>
+                        </ol>
+                        <div>
+                            <a href="https://www.honeycomb.io/blog/three-pillars-of-observability-logs-metrics-traces" target="_blank" class="resource-link">📄 Read: The Three Pillars of Observability</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-8 text-gray-500 text-sm">
+        <p>The Senior Developer's Interactive Roadmap</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const detailToggles = document.querySelectorAll('[data-toggle]');
+            detailToggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const parentDetails = toggle.closest('.details');
+                    if (parentDetails) {
+                        parentDetails.classList.toggle('open');
+                    }
+                });
+            });
+
+            const mobileNav = document.getElementById('mobile-nav');
+            mobileNav.addEventListener('change', (e) => {
+                const targetId = e.target.value;
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+
+            const navLinks = document.querySelectorAll('a.nav-link');
+            const sections = document.querySelectorAll('section');
+            const onScroll = () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+            window.addEventListener('scroll', onScroll);
+            onScroll();
+
+            const ctx = document.getElementById('messagingChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Apache Kafka', 'RabbitMQ'],
+                    datasets: [{
+                        label: 'Relative Message Throughput',
+                        data: [100, 45],
+                        backgroundColor: ['rgba(59, 130, 246, 0.7)', 'rgba(255, 102, 0, 0.7)'],
+                        borderColor: ['rgba(59, 130, 246, 1)', 'rgba(255, 102, 0, 1)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Relative Throughput (Higher is Better)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Messaging System Throughput Comparison', font: { size: 16 } }
+                    }
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
