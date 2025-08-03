@@ -58,20 +58,182 @@ How you structure your code is fundamental. A senior engineer should be proficie
 
 OOP models the real world using objects and classes. It's the dominant paradigm in many backend languages like Java and C#.
 
-- **The Four Pillars:** Encapsulation, Abstraction, Inheritance, and Polymorphism.
-- **SOLID Principles:** A set of five design principles for writing maintainable and scalable software.
-  - **S**ingle Responsibility: A class should have only one reason to change.
-  - **O**pen/Closed: Software entities should be open for extension, but closed for modification.
-  - **L**iskov Substitution: Subtypes must be substitutable for their base types.
-  - **I**nterface Segregation: Clients should not be forced to depend on interfaces they do not use.
-  - **D**ependency Inversion: High-level modules should not depend on low-level modules. Both should depend on abstractions.
+#### The Four Pillars
+- **Encapsulation:** Bundling data and methods together while hiding internal implementation
+- **Abstraction:** Hiding complex implementation details behind simple interfaces
+- **Inheritance:** Creating new classes based on existing ones
+- **Polymorphism:** Objects of different types responding to the same interface
+
+#### SOLID Principles with Code Examples
+
+**Single Responsibility Principle (SRP)**
+```java
+// ❌ Bad: Class has multiple responsibilities
+class User {
+    private String name;
+    private String email;
+    
+    public void save() { /* database logic */ }
+    public void sendEmail() { /* email logic */ }
+    public String generateReport() { /* reporting logic */ }
+}
+
+// ✅ Good: Each class has one responsibility
+class User {
+    private String name;
+    private String email;
+    // getters and setters only
+}
+
+class UserRepository {
+    public void save(User user) { /* database logic */ }
+}
+
+class EmailService {
+    public void sendEmail(User user, String message) { /* email logic */ }
+}
+
+class UserReportGenerator {
+    public String generateReport(User user) { /* reporting logic */ }
+}
+```
+
+**Open/Closed Principle (OCP)**
+```csharp
+// ✅ Good: Open for extension, closed for modification
+public abstract class PaymentProcessor
+{
+    public abstract void ProcessPayment(decimal amount);
+}
+
+public class CreditCardProcessor : PaymentProcessor
+{
+    public override void ProcessPayment(decimal amount)
+    {
+        // Credit card processing logic
+    }
+}
+
+public class PayPalProcessor : PaymentProcessor
+{
+    public override void ProcessPayment(decimal amount)
+    {
+        // PayPal processing logic
+    }
+}
+
+// Adding new payment method doesn't modify existing code
+public class CryptoProcessor : PaymentProcessor
+{
+    public override void ProcessPayment(decimal amount)
+    {
+        // Cryptocurrency processing logic
+    }
+}
+```
+
+**Dependency Inversion Principle (DIP)**
+```python
+from abc import ABC, abstractmethod
+
+# ✅ Good: Depend on abstractions, not concretions
+class EmailSender(ABC):
+    @abstractmethod
+    def send_email(self, to: str, subject: str, body: str):
+        pass
+
+class SMTPEmailSender(EmailSender):
+    def send_email(self, to: str, subject: str, body: str):
+        # SMTP implementation
+        pass
+
+class SendGridEmailSender(EmailSender):
+    def send_email(self, to: str, subject: str, body: str):
+        # SendGrid API implementation
+        pass
+
+class NotificationService:
+    def __init__(self, email_sender: EmailSender):
+        self._email_sender = email_sender  # Depends on abstraction
+    
+    def notify_user(self, user_email: str, message: str):
+        self._email_sender.send_email(user_email, "Notification", message)
+```
 
 ### Functional Programming (FP)
 
 FP treats computation as the evaluation of mathematical functions and avoids changing-state and mutable data.
 
-- **Core Concepts:** Pure functions (the same input always returns the same output, with no side effects), immutability, first-class and higher-order functions.
-- **Why it matters:** FP leads to more predictable, testable, and concurrent code, which is invaluable in distributed systems.
+#### Core Concepts with Examples
+
+**Pure Functions**
+```javascript
+// ✅ Pure function: same input always produces same output, no side effects
+function calculateTotal(items) {
+    return items.reduce((total, item) => total + item.price, 0);
+}
+
+// ❌ Impure function: modifies external state, unpredictable output
+let discount = 0.1;
+function calculateTotalWithDiscount(items) {
+    const total = items.reduce((sum, item) => sum + item.price, 0);
+    discount += 0.01; // Side effect: modifies external state
+    return total * (1 - Math.random() * discount); // Unpredictable output
+}
+```
+
+**Immutability**
+```python
+# ✅ Immutable approach
+def add_item_to_cart(cart_items, new_item):
+    return cart_items + [new_item]  # Returns new list, original unchanged
+
+# ❌ Mutable approach
+def add_item_to_cart_mutable(cart_items, new_item):
+    cart_items.append(new_item)  # Modifies original list
+    return cart_items
+```
+
+**Higher-Order Functions**
+```java
+// Java 8+ with functional programming concepts
+import java.util.function.Function;
+import java.util.function.Predicate;
+
+public class OrderProcessor {
+    // Higher-order function: takes function as parameter
+    public static <T, R> List<R> processOrders(
+        List<T> orders, 
+        Function<T, R> processor
+    ) {
+        return orders.stream()
+            .map(processor)
+            .collect(Collectors.toList());
+    }
+    
+    // Usage examples
+    public static void main(String[] args) {
+        List<Order> orders = getOrders();
+        
+        // Transform orders to invoices
+        List<Invoice> invoices = processOrders(orders, order -> {
+            return new Invoice(order.getId(), order.getTotal());
+        });
+        
+        // Filter and transform
+        List<String> expensiveOrderIds = orders.stream()
+            .filter(order -> order.getTotal() > 1000)
+            .map(Order::getId)
+            .collect(Collectors.toList());
+    }
+}
+```
+
+**Why FP Matters for Backend Systems:**
+- **Predictability:** Pure functions are easier to test and debug
+- **Concurrency:** Immutable data eliminates race conditions
+- **Composability:** Small, pure functions can be easily combined
+- **Fault Tolerance:** Less shared state means fewer points of failure
 
 :::tip Deep Dive: Resources
 - [📄 **SOLID Principles for C# Developers** (Code-Maze)](https://code-maze.com/solid-principles-csharp/)
@@ -141,23 +303,105 @@ graph TD
 Security is not a feature; it's a foundational requirement. A senior developer must proactively identify and mitigate common vulnerabilities.
 
 - **The OWASP Top 10:** This is the essential checklist for web security. It's a standard awareness document for developers and web application security. It represents a broad consensus about the most critical security risks.
-- **Example Vulnerability: SQL Injection**
-  An attacker can use a web form or URL parameter to send a malicious SQL query.
+### Common Security Vulnerabilities with Examples
 
-  **Vulnerable Code (Node.js):**
-  ```javascript
-  const userId = req.query.id; // e.g., "1 OR 1=1"
-  const query = `SELECT * FROM users WHERE id = ${userId}`; // DANGEROUS!
-  db.query(query, (err, results) => { ... });
-  ```
+#### SQL Injection
+An attacker can use a web form or URL parameter to send a malicious SQL query.
 
-  **Prevention: Parameterized Queries (Prepared Statements)**
-  ```javascript
-  const userId = req.query.id;
-  const query = 'SELECT * FROM users WHERE id = ?'; // SAFE
-  db.query(query, [userId], (err, results) => { ... });
-  ```
-  By using parameterized queries, the database driver treats the user input as a value, not as executable code, neutralizing the attack.
+**Vulnerable Code Examples:**
+```javascript
+// Node.js - DANGEROUS!
+const userId = req.query.id; // Attacker sends: "1 OR 1=1; DROP TABLE users; --"
+const query = `SELECT * FROM users WHERE id = ${userId}`;
+db.query(query, (err, results) => { /* This could delete your entire table! */ });
+```
+
+```python
+# Python - DANGEROUS!
+def get_user(user_id):
+    query = f"SELECT * FROM users WHERE id = {user_id}"  # Vulnerable to injection
+    cursor.execute(query)
+    return cursor.fetchone()
+```
+
+**Safe Implementation with Parameterized Queries:**
+```javascript
+// Node.js - SAFE
+const userId = req.query.id;
+const query = 'SELECT * FROM users WHERE id = ?';
+db.query(query, [userId], (err, results) => {
+    // Database treats userId as a value, not executable code
+});
+```
+
+```python
+# Python - SAFE
+def get_user(user_id):
+    query = "SELECT * FROM users WHERE id = %s"
+    cursor.execute(query, (user_id,))  # Parameterized query prevents injection
+    return cursor.fetchone()
+```
+
+```csharp
+// C# Entity Framework - SAFE
+public async Task<User> GetUserAsync(int userId)
+{
+    return await _context.Users
+        .Where(u => u.Id == userId)  // EF Core uses parameterized queries automatically
+        .FirstOrDefaultAsync();
+}
+```
+
+#### Cross-Site Scripting (XSS) Prevention
+```javascript
+// ❌ Vulnerable to XSS
+app.get('/user/:id', (req, res) => {
+    const userInput = req.params.id;
+    res.send(`<h1>User: ${userInput}</h1>`); // Raw HTML insertion
+});
+
+// ✅ Safe: HTML escaping
+const escapeHtml = (unsafe) => {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+};
+
+app.get('/user/:id', (req, res) => {
+    const userInput = escapeHtml(req.params.id);
+    res.send(`<h1>User: ${userInput}</h1>`); // Escaped output
+});
+```
+
+#### Input Validation Example
+```java
+// Java with Bean Validation
+public class UserRegistrationRequest {
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
+    private String email;
+    
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]", 
+             message = "Password must contain uppercase, lowercase, digit and special character")
+    private String password;
+    
+    // getters and setters
+}
+
+@PostMapping("/register")
+public ResponseEntity<?> register(@Valid @RequestBody UserRegistrationRequest request) {
+    // Validation happens automatically due to @Valid annotation
+    // If validation fails, Spring returns 400 Bad Request with error details
+    return userService.registerUser(request);
+}
+```
+
+By using parameterized queries and proper input validation, you create multiple layers of defense against common attacks.
 
 :::tip Deep Dive: Resources
 - [📄 **OWASP Top 10** (Official Site)](https://owasp.org/www-project-top-ten/)

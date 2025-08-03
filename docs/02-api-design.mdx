@@ -11,16 +11,237 @@ The Application Programming Interface (API) is the backbone of modern software. 
 
 REST (Representational State Transfer) has been the dominant architectural style for web APIs for years because it's built on the same principles as the web itself: simplicity, scalability, and statelessness.
 
-- **Resource-Based Naming:** A core tenet of REST is thinking in terms of resources. URIs should identify resources, not actions.
-  - **Good:** `/users/123/orders` (Get all orders for user 123)
-  - **Bad:** `/getOrdersForUser?userId=123`
-- **Use HTTP Verbs Correctly:** Use the semantics of HTTP methods to express actions on resources.
-  - `GET`: Retrieve a resource.
-  - `POST`: Create a new resource.
-  - `PUT`: Replace an existing resource entirely.
-  - `PATCH`: Partially update an existing resource.
-  - `DELETE`: Remove a resource.
-- **API Versioning:** As your API evolves, you'll inevitably need to introduce breaking changes. A versioning strategy is essential for a smooth transition for your clients. URI versioning (`/api/v1/...`) is the most common and explicit approach.
+### Resource-Based Design Examples
+
+**Good REST API Design:**
+```http
+# Users Resource
+GET    /api/v1/users              # Get all users
+GET    /api/v1/users/123          # Get specific user
+POST   /api/v1/users              # Create new user
+PUT    /api/v1/users/123          # Replace entire user
+PATCH  /api/v1/users/123          # Partially update user
+DELETE /api/v1/users/123          # Delete user
+
+# Nested Resources
+GET    /api/v1/users/123/orders   # Get all orders for user 123
+POST   /api/v1/users/123/orders   # Create order for user 123
+GET    /api/v1/users/123/orders/456 # Get specific order for user
+```
+
+**Bad REST API Design:**
+```http
+# ❌ RPC-style endpoints (avoid these)
+GET /getUser?id=123
+POST /createUser
+POST /updateUserPassword
+POST /deleteUser
+GET /getUserOrders?userId=123
+```
+
+### Complete REST API Implementation Examples
+
+**Node.js/Express Example:**
+```javascript
+const express = require('express');
+const app = express();
+
+// User Resource Controller
+class UserController {
+    // GET /api/v1/users
+    static async getAllUsers(req, res) {
+        try {
+            const { page = 1, limit = 10, search } = req.query;
+            const users = await userService.getUsers({ page, limit, search });
+            
+            res.status(200).json({
+                data: users.items,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: users.total,
+                    pages: Math.ceil(users.total / limit)
+                },
+                links: {
+                    self: `/api/v1/users?page=${page}&limit=${limit}`,
+                    next: page < Math.ceil(users.total / limit) 
+                        ? `/api/v1/users?page=${parseInt(page) + 1}&limit=${limit}` 
+                        : null
+                }
+            });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+    
+    // POST /api/v1/users
+    static async createUser(req, res) {
+        try {
+            const { name, email, password } = req.body;
+            
+            // Validation
+            if (!name || !email || !password) {
+                return res.status(400).json({
+                    error: 'Validation failed',
+                    details: {
+                        name: !name ? 'Name is required' : null,
+                        email: !email ? 'Email is required' : null,
+                        password: !password ? 'Password is required' : null
+                    }
+                });
+            }
+            
+            const user = await userService.createUser({ name, email, password });
+            
+            res.status(201).json({
+                data: user,
+                links: {
+                    self: `/api/v1/users/${user.id}`,
+                    orders: `/api/v1/users/${user.id}/orders`
+                }
+            });
+        } catch (error) {
+            if (error.code === 'DUPLICATE_EMAIL') {
+                return res.status(409).json({ error: 'Email already exists' });
+            }
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+    
+    // PATCH /api/v1/users/:id
+    static async updateUser(req, res) {
+        try {
+            const { id } = req.params;
+            const updates = req.body;
+            
+            const user = await userService.updateUser(id, updates);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+            
+            res.status(200).json({ data: user });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+}
+
+// Routes
+app.get('/api/v1/users', UserController.getAllUsers);
+app.post('/api/v1/users', UserController.createUser);
+app.patch('/api/v1/users/:id', UserController.updateUser);
+```
+
+**Java Spring Boot Example:**
+```java
+@RestController
+@RequestMapping("/api/v1/users")
+@Validated
+public class UserController {
+    
+    @Autowired
+    private UserService userService;
+    
+    @GetMapping
+    public ResponseEntity<PagedResponse<UserDto>> getAllUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(required = false) String search) {
+        
+        Page<User> users = userService.getUsers(page - 1, limit, search);
+        
+        PagedResponse<UserDto> response = new PagedResponse<>();
+        response.setData(users.getContent().stream()
+            .map(UserDto::fromEntity)
+            .collect(Collectors.toList()));
+        response.setPagination(new PaginationInfo(
+            page, limit, users.getTotalElements(), users.getTotalPages()
+        ));
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping
+    public ResponseEntity<ApiResponse<UserDto>> createUser(
+            @Valid @RequestBody CreateUserRequest request) {
+        
+        User user = userService.createUser(request);
+        UserDto userDto = UserDto.fromEntity(user);
+        
+        ApiResponse<UserDto> response = new ApiResponse<>();
+        response.setData(userDto);
+        response.setLinks(Map.of(
+            "self", "/api/v1/users/" + user.getId(),
+            "orders", "/api/v1/users/" + user.getId() + "/orders"
+        ));
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+    
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserDto>> updateUser(
+            @PathVariable Long id,
+            @RequestBody UpdateUserRequest request) {
+        
+        Optional<User> userOpt = userService.updateUser(id, request);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        ApiResponse<UserDto> response = new ApiResponse<>();
+        response.setData(UserDto.fromEntity(userOpt.get()));
+        
+        return ResponseEntity.ok(response);
+    }
+}
+```
+
+### HTTP Status Codes in Practice
+
+```javascript
+// Comprehensive status code usage
+const StatusCodes = {
+    // 2xx Success
+    OK: 200,                    // GET successful
+    CREATED: 201,               // POST successful
+    NO_CONTENT: 204,            // DELETE successful
+    
+    // 4xx Client Errors
+    BAD_REQUEST: 400,           // Invalid request data
+    UNAUTHORIZED: 401,          // Authentication required
+    FORBIDDEN: 403,             // Authenticated but not authorized
+    NOT_FOUND: 404,             // Resource doesn't exist
+    CONFLICT: 409,              // Resource already exists
+    UNPROCESSABLE_ENTITY: 422,  // Validation errors
+    
+    // 5xx Server Errors
+    INTERNAL_SERVER_ERROR: 500, // Generic server error
+    SERVICE_UNAVAILABLE: 503    // Temporary server issue
+};
+
+// Usage in error handling
+app.use((error, req, res, next) => {
+    if (error instanceof ValidationError) {
+        return res.status(StatusCodes.UNPROCESSABLE_ENTITY).json({
+            error: 'Validation failed',
+            details: error.details
+        });
+    }
+    
+    if (error instanceof NotFoundError) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            error: 'Resource not found'
+        });
+    }
+    
+    // Log the error for debugging
+    console.error('Unhandled error:', error);
+    
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        error: 'Internal server error'
+    });
+});
+```
 
 :::tip Deep Dive: Resources
 - [📄 **Microsoft REST API Guidelines**](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
@@ -34,6 +255,229 @@ REST (Representational State Transfer) has been the dominant architectural style
 ## GraphQL
 
 GraphQL is a query language for your API that gives clients the power to ask for exactly what they need and nothing more. It's a powerful alternative to REST, especially for applications with complex data requirements or diverse clients (e.g., web and mobile).
+
+### GraphQL Schema and Resolvers Examples
+
+**Schema Definition (GraphQL SDL):**
+```graphql
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  posts: [Post!]!
+  createdAt: String!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  author: User!
+  comments: [Comment!]!
+  publishedAt: String
+}
+
+type Comment {
+  id: ID!
+  content: String!
+  author: User!
+  post: Post!
+  createdAt: String!
+}
+
+type Query {
+  users(limit: Int, offset: Int): [User!]!
+  user(id: ID!): User
+  posts(authorId: ID, published: Boolean): [Post!]!
+  post(id: ID!): Post
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): User!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+  createPost(input: CreatePostInput!): Post!
+  publishPost(id: ID!): Post!
+}
+
+input CreateUserInput {
+  name: String!
+  email: String!
+}
+
+input UpdateUserInput {
+  name: String
+  email: String
+}
+
+input CreatePostInput {
+  title: String!
+  content: String!
+  authorId: ID!
+}
+```
+
+**Resolver Implementation (Node.js):**
+```javascript
+const resolvers = {
+  Query: {
+    users: async (parent, { limit = 10, offset = 0 }) => {
+      return await userService.getUsers({ limit, offset });
+    },
+    
+    user: async (parent, { id }) => {
+      const user = await userService.getUserById(id);
+      if (!user) {
+        throw new Error(`User with id ${id} not found`);
+      }
+      return user;
+    },
+    
+    posts: async (parent, { authorId, published }) => {
+      return await postService.getPosts({ authorId, published });
+    }
+  },
+  
+  Mutation: {
+    createUser: async (parent, { input }) => {
+      try {
+        return await userService.createUser(input);
+      } catch (error) {
+        if (error.code === 'DUPLICATE_EMAIL') {
+          throw new Error('Email already exists');
+        }
+        throw error;
+      }
+    },
+    
+    createPost: async (parent, { input }, context) => {
+      // Check authentication
+      if (!context.user) {
+        throw new Error('Authentication required');
+      }
+      
+      // Check authorization
+      if (context.user.id !== input.authorId) {
+        throw new Error('You can only create posts for yourself');
+      }
+      
+      return await postService.createPost(input);
+    }
+  },
+  
+  // Nested field resolvers
+  User: {
+    posts: async (user, args, context, info) => {
+      // Check if posts are already loaded (to avoid N+1)
+      if (user.posts) {
+        return user.posts;
+      }
+      
+      // Use DataLoader to batch requests
+      return context.loaders.postsByAuthor.load(user.id);
+    }
+  },
+  
+  Post: {
+    author: async (post, args, context) => {
+      return context.loaders.userById.load(post.authorId);
+    },
+    
+    comments: async (post, args, context) => {
+      return context.loaders.commentsByPost.load(post.id);
+    }
+  }
+};
+```
+
+**DataLoader for N+1 Problem Prevention:**
+```javascript
+const DataLoader = require('dataloader');
+
+// Batch function for loading users
+const batchUsers = async (userIds) => {
+  const users = await userService.getUsersByIds(userIds);
+  // Return users in the same order as requested IDs
+  return userIds.map(id => users.find(user => user.id === id));
+};
+
+// Batch function for loading posts by author
+const batchPostsByAuthor = async (authorIds) => {
+  const posts = await postService.getPostsByAuthorIds(authorIds);
+  // Group posts by author ID
+  return authorIds.map(authorId => 
+    posts.filter(post => post.authorId === authorId)
+  );
+};
+
+// Create loaders in context
+const createLoaders = () => ({
+  userById: new DataLoader(batchUsers),
+  postsByAuthor: new DataLoader(batchPostsByAuthor),
+  commentsByPost: new DataLoader(batchCommentsByPost)
+});
+
+// Apollo Server setup
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  context: ({ req }) => {
+    return {
+      user: req.user, // from authentication middleware
+      loaders: createLoaders()
+    };
+  }
+});
+```
+
+**Client Query Examples:**
+```graphql
+# Fetch specific fields only
+query GetUsers {
+  users(limit: 5) {
+    id
+    name
+    email
+    posts {
+      id
+      title
+      publishedAt
+    }
+  }
+}
+
+# Complex nested query
+query GetUserWithRecentActivity($userId: ID!) {
+  user(id: $userId) {
+    id
+    name
+    email
+    posts(limit: 3) {
+      id
+      title
+      comments(limit: 2) {
+        id
+        content
+        author {
+          name
+        }
+      }
+    }
+  }
+}
+
+# Mutation with error handling
+mutation CreatePost($input: CreatePostInput!) {
+  createPost(input: $input) {
+    id
+    title
+    content
+    author {
+      name
+    }
+    createdAt
+  }
+}
+```
 
 ### Solving the N+1 Problem
 
@@ -114,6 +558,257 @@ sequenceDiagram
 
 **JSON Web Tokens (JWT)** are a common way to implement stateless authentication. The server creates a signed token containing user claims, and the client sends this token with each request. The server can verify the token's signature without needing to store session state.
 
+### JWT Implementation Examples
+
+**JWT Creation and Validation (Node.js):**
+```javascript
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+
+class AuthService {
+    static async login(email, password) {
+        // 1. Validate user credentials
+        const user = await userService.getUserByEmail(email);
+        if (!user) {
+            throw new Error('Invalid credentials');
+        }
+        
+        const isValidPassword = await bcrypt.compare(password, user.hashedPassword);
+        if (!isValidPassword) {
+            throw new Error('Invalid credentials');
+        }
+        
+        // 2. Create JWT payload
+        const payload = {
+            userId: user.id,
+            email: user.email,
+            roles: user.roles,
+            iat: Math.floor(Date.now() / 1000), // Issued at
+            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // Expires in 24 hours
+        };
+        
+        // 3. Sign the token
+        const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
+            algorithm: 'HS256'
+        });
+        
+        // 4. Create refresh token
+        const refreshToken = jwt.sign(
+            { userId: user.id, type: 'refresh' },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: '7d' }
+        );
+        
+        return {
+            accessToken,
+            refreshToken,
+            expiresIn: 86400, // 24 hours in seconds
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name
+            }
+        };
+    }
+    
+    static async verifyToken(token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            return decoded;
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                throw new Error('Token expired');
+            }
+            throw new Error('Invalid token');
+        }
+    }
+    
+    static async refreshAccessToken(refreshToken) {
+        try {
+            const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+            
+            if (decoded.type !== 'refresh') {
+                throw new Error('Invalid refresh token');
+            }
+            
+            const user = await userService.getUserById(decoded.userId);
+            if (!user) {
+                throw new Error('User not found');
+            }
+            
+            // Generate new access token
+            return this.generateAccessToken(user);
+        } catch (error) {
+            throw new Error('Invalid refresh token');
+        }
+    }
+}
+
+// Authentication middleware
+const authenticateToken = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+    
+    try {
+        const decoded = await AuthService.verifyToken(token);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({ error: error.message });
+    }
+};
+
+// Role-based authorization middleware
+const requireRoles = (...roles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        
+        const hasRequiredRole = roles.some(role => req.user.roles.includes(role));
+        if (!hasRequiredRole) {
+            return res.status(403).json({ error: 'Insufficient permissions' });
+        }
+        
+        next();
+    };
+};
+
+// Usage in routes
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const authResult = await AuthService.login(email, password);
+        res.json(authResult);
+    } catch (error) {
+        res.status(401).json({ error: error.message });
+    }
+});
+
+app.get('/api/profile', authenticateToken, (req, res) => {
+    res.json({ user: req.user });
+});
+
+app.delete('/api/users/:id', authenticateToken, requireRoles('admin'), (req, res) => {
+    // Only admins can delete users
+    userService.deleteUser(req.params.id);
+    res.status(204).send();
+});
+```
+
+**C# JWT Implementation:**
+```csharp
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+
+public class JwtService
+{
+    private readonly IConfiguration _configuration;
+    
+    public JwtService(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+    
+    public string GenerateToken(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.Name)
+        };
+        
+        // Add role claims
+        foreach (var role in user.Roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+        
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Secret"]));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        
+        var token = new JwtSecurityToken(
+            issuer: _configuration["Jwt:Issuer"],
+            audience: _configuration["Jwt:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(24),
+            signingCredentials: credentials
+        );
+        
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+    
+    public ClaimsPrincipal ValidateToken(string token)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Secret"]);
+        
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateIssuer = true,
+            ValidIssuer = _configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = _configuration["Jwt:Audience"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+        
+        var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
+        return principal;
+    }
+}
+
+// Usage in ASP.NET Core controller
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly JwtService _jwtService;
+    private readonly UserService _userService;
+    
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var user = await _userService.ValidateCredentialsAsync(request.Email, request.Password);
+        if (user == null)
+        {
+            return Unauthorized(new { Error = "Invalid credentials" });
+        }
+        
+        var token = _jwtService.GenerateToken(user);
+        
+        return Ok(new
+        {
+            AccessToken = token,
+            ExpiresIn = 86400,
+            User = new
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Name = user.Name
+            }
+        });
+    }
+}
+
+// Authorization attribute usage
+[Authorize(Roles = "Admin")]
+[HttpDelete("{id}")]
+public async Task<IActionResult> DeleteUser(int id)
+{
+    await _userService.DeleteUserAsync(id);
+    return NoContent();
+}
+```
+
 :::tip Deep Dive: Resources
 - [📄 **OAuth 2.0 Simplified**](https://www.oauth.com/)
 - [📄 **JWT.io Introduction**](https://jwt.io/introduction)
@@ -155,38 +850,532 @@ graph TD
   - **Act:** Execute the code under test
   - **Assert:** Verify the results
 
-**Example: Testing a REST API endpoint**
+### Comprehensive API Testing Examples
+
+**Unit Testing with Mocking (Jest/Node.js):**
 ```javascript
-// Jest/Node.js example
-describe('POST /api/users', () => {
-  it('should create a new user', async () => {
-    // Arrange
-    const userData = { name: 'John Doe', email: 'john@example.com' };
-    const mockUser = { id: 1, ...userData };
-    jest.spyOn(userService, 'create').mockResolvedValue(mockUser);
+// userController.test.js
+const request = require('supertest');
+const app = require('../app');
+const userService = require('../services/userService');
 
-    // Act
-    const response = await request(app)
-      .post('/api/users')
-      .send(userData);
+// Mock the service layer
+jest.mock('../services/userService');
 
-    // Assert
-    expect(response.status).toBe(201);
-    expect(response.body).toEqual(mockUser);
-    expect(userService.create).toHaveBeenCalledWith(userData);
+describe('User API Endpoints', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+  
+  describe('POST /api/users', () => {
+    it('should create a new user', async () => {
+      // Arrange
+      const userData = { name: 'John Doe', email: 'john@example.com' };
+      const mockUser = { id: 1, ...userData, createdAt: '2023-01-01T00:00:00Z' };
+      userService.createUser.mockResolvedValue(mockUser);
+
+      // Act
+      const response = await request(app)
+        .post('/api/users')
+        .send(userData)
+        .expect('Content-Type', /json/);
+
+      // Assert
+      expect(response.status).toBe(201);
+      expect(response.body.data).toEqual(mockUser);
+      expect(response.body.links.self).toBe(`/api/users/${mockUser.id}`);
+      expect(userService.createUser).toHaveBeenCalledWith(userData);
+    });
+    
+    it('should return 400 for invalid data', async () => {
+      // Arrange
+      const invalidData = { name: '', email: 'invalid-email' };
+      
+      // Act
+      const response = await request(app)
+        .post('/api/users')
+        .send(invalidData);
+      
+      // Assert
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toHaveProperty('name');
+      expect(response.body.details).toHaveProperty('email');
+      expect(userService.createUser).not.toHaveBeenCalled();
+    });
+    
+    it('should return 409 for duplicate email', async () => {
+      // Arrange
+      const userData = { name: 'John Doe', email: 'existing@example.com' };
+      const duplicateError = new Error('Email already exists');
+      duplicateError.code = 'DUPLICATE_EMAIL';
+      userService.createUser.mockRejectedValue(duplicateError);
+      
+      // Act
+      const response = await request(app)
+        .post('/api/users')
+        .send(userData);
+      
+      // Assert
+      expect(response.status).toBe(409);
+      expect(response.body.error).toBe('Email already exists');
+    });
+  });
+  
+  describe('GET /api/users/:id', () => {
+    it('should return user by id', async () => {
+      // Arrange
+      const mockUser = { id: 1, name: 'John Doe', email: 'john@example.com' };
+      userService.getUserById.mockResolvedValue(mockUser);
+      
+      // Act
+      const response = await request(app)
+        .get('/api/users/1');
+      
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual(mockUser);
+    });
+    
+    it('should return 404 for non-existent user', async () => {
+      // Arrange
+      userService.getUserById.mockResolvedValue(null);
+      
+      // Act
+      const response = await request(app)
+        .get('/api/users/999');
+      
+      // Assert
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('User not found');
+    });
   });
 });
 ```
 
+**Integration Testing (Database + API):**
+```javascript
+// integration/userApi.test.js
+const request = require('supertest');
+const app = require('../app');
+const { setupTestDB, teardownTestDB } = require('./helpers/dbHelper');
+
+describe('User API Integration Tests', () => {
+  beforeAll(async () => {
+    await setupTestDB();
+  });
+  
+  afterAll(async () => {
+    await teardownTestDB();
+  });
+  
+  it('should create and retrieve a user', async () => {
+    // Create user
+    const userData = { name: 'Integration Test User', email: 'integration@test.com' };
+    const createResponse = await request(app)
+      .post('/api/users')
+      .send(userData)
+      .expect(201);
+    
+    const createdUser = createResponse.body.data;
+    expect(createdUser).toHaveProperty('id');
+    expect(createdUser.name).toBe(userData.name);
+    
+    // Retrieve user
+    const getResponse = await request(app)
+      .get(`/api/users/${createdUser.id}`)
+      .expect(200);
+    
+    expect(getResponse.body.data).toEqual(createdUser);
+  });
+});
+```
+
+**Contract Testing with Pact (Consumer Side):**
+```javascript
+// userApiPact.test.js
+const { Pact } = require('@pact-foundation/pact');
+const axios = require('axios');
+
+const provider = new Pact({
+  consumer: 'UserWebApp',
+  provider: 'UserAPI',
+  port: 3001,
+  log: './pact/logs/pact.log',
+  dir: './pact/pacts',
+  logLevel: 'INFO'
+});
+
+describe('User API Contract Tests', () => {
+  beforeAll(() => provider.setup());
+  afterEach(() => provider.verify());
+  afterAll(() => provider.finalize());
+  
+  it('should get user by id', async () => {
+    // Arrange - Define expected interaction
+    await provider.addInteraction({
+      state: 'user with id 1 exists',
+      uponReceiving: 'a request for user 1',
+      withRequest: {
+        method: 'GET',
+        path: '/api/users/1',
+        headers: {
+          'Accept': 'application/json'
+        }
+      },
+      willRespondWith: {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: {
+          data: {
+            id: 1,
+            name: 'John Doe',
+            email: 'john@example.com'
+          }
+        }
+      }
+    });
+    
+    // Act
+    const response = await axios.get('http://localhost:3001/api/users/1', {
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    // Assert
+    expect(response.status).toBe(200);
+    expect(response.data.data.id).toBe(1);
+    expect(response.data.data.name).toBe('John Doe');
+  });
+});
+```
+
+**End-to-End API Testing (with authentication):**
+```javascript
+// e2e/userFlow.test.js
+const request = require('supertest');
+const app = require('../app');
+
+describe('User Management E2E Flow', () => {
+  let authToken;
+  let createdUserId;
+  
+  it('should authenticate admin user', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'admin@test.com',
+        password: 'adminpassword'
+      })
+      .expect(200);
+    
+    authToken = response.body.accessToken;
+    expect(authToken).toBeDefined();
+  });
+  
+  it('should create, read, update, and delete user', async () => {
+    // Create
+    const createResponse = await request(app)
+      .post('/api/users')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        name: 'E2E Test User',
+        email: 'e2e@test.com'
+      })
+      .expect(201);
+    
+    createdUserId = createResponse.body.data.id;
+    
+    // Read
+    await request(app)
+      .get(`/api/users/${createdUserId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(200);
+    
+    // Update
+    await request(app)
+      .patch(`/api/users/${createdUserId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ name: 'Updated Name' })
+      .expect(200);
+    
+    // Delete
+    await request(app)
+      .delete(`/api/users/${createdUserId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(204);
+    
+    // Verify deletion
+    await request(app)
+      .get(`/api/users/${createdUserId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(404);
+  });
+});
+```
+
+**Load Testing with Artillery:**
+```yaml
+# artillery-config.yml
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 10
+    - duration: 120
+      arrivalRate: 50
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+
+scenarios:
+  - name: 'Create and retrieve users'
+    weight: 70
+    flow:
+      - post:
+          url: '/api/users'
+          json:
+            name: 'Load Test User {{ $randomString() }}'
+            email: 'load{{ $randomInt(1, 10000) }}@test.com'
+          capture:
+            - json: '$.data.id'
+              as: 'userId'
+      - get:
+          url: '/api/users/{{ userId }}'
+  
+  - name: 'Get all users'
+    weight: 30
+    flow:
+      - get:
+          url: '/api/users?limit=20'
+```
+
 ### API Documentation & Testing Tools
 
-- **OpenAPI/Swagger:** Document your APIs and generate interactive documentation.
-- **Postman/Insomnia:** Manual API testing and automation.
-- **Newman:** Run Postman collections in CI/CD pipelines.
+**OpenAPI/Swagger Documentation:**
+```yaml
+# openapi.yml
+openapi: 3.0.3
+info:
+  title: User Management API
+  description: A comprehensive API for managing users
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+paths:
+  /users:
+    get:
+      summary: Get all users
+      description: Retrieve a paginated list of users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search users by name or email
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    
+    post:
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-01-01T00:00:00Z"
+    
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+  
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Validation failed"
+              details:
+                type: object
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+```
+
+**Newman (Postman CLI) Configuration:**
+```json
+{
+  "info": {
+    "name": "User API Test Suite",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has access token', () => {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('accessToken');",
+                  "    pm.environment.set('authToken', responseJson.accessToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.example.com/v1"
+    }
+  ]
+}
+```
+
+**Running API Tests in CI/CD:**
+```bash
+# Install Newman globally
+npm install -g newman
+
+# Run Postman collection with environment
+newman run user-api-tests.json \
+  --environment production.json \
+  --reporters cli,json \
+  --reporter-json-export results.json
+
+# Run with data file for multiple test scenarios
+newman run user-api-tests.json \
+  --data test-data.csv \
+  --iteration-count 10
+```
 
 :::tip Deep Dive: Resources
 - [📄 **The Practical Test Pyramid** by Martin Fowler](https://martinfowler.com/articles/practical-test-pyramid.html)
 - [▶️ **Test-Driven Development** (Video)](https://www.youtube.com/watch?v=QCif_-r8eK4)
 - [📄 **Contract Testing with Pact**](https://docs.pact.io/)
 - [📄 **API Testing Best Practices**](https://assertible.com/blog/13-things-you-should-do-to-build-better-restful-web-apis)
+- [📄 **OpenAPI Specification**](https://swagger.io/specification/)
+- [🛠️ **Newman Documentation**](https://learning.postman.com/docs/running-collections/using-newman-cli/command-line-integration-with-newman/)
+- [📄 **GraphQL Testing Guide**](https://www.apollographql.com/docs/apollo-server/testing/testing/)
 :::
