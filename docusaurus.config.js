@@ -84,10 +84,12 @@ const config = {
           {
             title: 'Roadmap Sections',
             items: [
-              { label: 'Architecture & Design', to: '/docs/01-architecture-and-design' },
-              { label: 'Core Backend Concepts', to: '/docs/02-core-backend-concepts' },
-              { label: 'Data & Storage', to: '/docs/03-data-and-storage' },
-              { label: 'Scaling & Performance', to: '/docs/04-scaling-and-performance' },
+              { label: 'Foundations', to: '/docs/foundations' },
+              { label: 'API Design', to: '/docs/api-design' },
+              { label: 'System Architecture', to: '/docs/system-architecture' },
+              { label: 'Data & Persistence', to: '/docs/data-and-persistence' },
+              { label: 'Deployment & Operations', to: '/docs/deployment-and-operations' },
+              { label: 'Observability & Performance', to: '/docs/observability-and-performance' },
             ],
           },
           {
