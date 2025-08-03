@@ -1,23 +1,46 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
 .heroBanner {
   padding: 4rem 0;
   text-align: center;
   position: relative;
   overflow: hidden;
+  background-color: #f7f7f7; /* Light gray background */
+  color: #1c1e21; /* Dark text for contrast */
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
+[data-theme='dark'] .heroBanner {
+  background-color: #1c1e21; /* Dark background for dark mode */
+  color: #ffffff; /* White text for contrast */
+}
+
+.heroLogo {
+  max-width: 200px; /* Adjust size as needed */
+  margin-bottom: 2rem;
 }
 
 .buttons {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 2rem;
+}
+
+.features {
+  padding: 4rem 0;
+  width: 100%;
+}
+
+.featureCard {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.featureCard .card {
+  flex: 1; /* Make all cards the same height */
+  display: flex;
+  flex-direction: column;
+}
+
+.featureCard .card__body {
+  flex-grow: 1; /* Make the body take up available space */
 }

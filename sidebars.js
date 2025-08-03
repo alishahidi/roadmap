@@ -1,7 +1,5 @@
 // @ts-check
 
-// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
-
 /**
  * Creating a sidebar enables you to:
  - create an ordered group of docs
@@ -22,10 +20,12 @@ const sidebars = {
       label: 'Senior Developer Roadmap',
       collapsible: false,
       items: [
-        'part1',
-        'part2',
-        'part3',
-        'part4',
+        '01-foundations',
+        '02-api-design',
+        '03-system-architecture',
+        '04-data-and-persistence',
+        '05-deployment-and-operations',
+        '06-observability-and-performance',
       ],
     },
   ],
