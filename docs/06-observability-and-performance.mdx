@@ -39,13 +39,371 @@ graph TD
     D -- "Span" --> G;
 ```
 
-1.  **Logging:** A detailed, timestamped record of a discrete event. Use **structured logging** (e.g., JSON) so logs can be easily searched and filtered. Centralize logs into a single platform (e.g., ELK Stack, Splunk, Datadog).
-2.  **Metrics:** Aggregated numerical data measured over time. Monitor the **"Four Golden Signals"**:
-    - **Latency:** The time it takes to service a request.
-    - **Traffic:** A measure of how much demand is being placed on your system.
-    - **Errors:** The rate of requests that fail.
-    - **Saturation:** How "full" your service is (e.g., CPU, memory).
-3.  **Distributed Tracing:** Traces the lifecycle of a single request as it propagates through multiple services. This is essential for pinpointing bottlenecks and understanding failures in a microservices architecture.
+### 1. Logging Implementation Examples
+
+**Structured Logging with Winston (Node.js):**
+```javascript
+const winston = require('winston');
+const { ElasticsearchTransport } = require('winston-elasticsearch');
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { 
+    service: 'user-service',
+    version: process.env.APP_VERSION || '1.0.0'
+  },
+  transports: [
+    // Console for development
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    }),
+    
+    // File for production
+    new winston.transports.File({ 
+      filename: 'logs/error.log', 
+      level: 'error' 
+    }),
+    new winston.transports.File({ 
+      filename: 'logs/combined.log' 
+    }),
+    
+    // Elasticsearch for centralized logging
+    new ElasticsearchTransport({
+      level: 'info',
+      clientOpts: { node: process.env.ELASTICSEARCH_URL },
+      index: 'application-logs'
+    })
+  ]
+});
+
+// Usage in application
+class UserService {
+  async createUser(userData) {
+    const userId = crypto.randomUUID();
+    
+    logger.info('Creating user', {
+      operation: 'create_user',
+      userId,
+      email: userData.email,
+      metadata: {
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+    
+    try {
+      const user = await this.userRepository.create({
+        id: userId,
+        ...userData
+      });
+      
+      logger.info('User created successfully', {
+        operation: 'create_user',
+        userId,
+        duration: Date.now() - startTime
+      });
+      
+      return user;
+    } catch (error) {
+      logger.error('Failed to create user', {
+        operation: 'create_user',
+        userId,
+        error: error.message,
+        stack: error.stack,
+        userData: { email: userData.email } // Don't log sensitive data
+      });
+      throw error;
+    }
+  }
+}
+```
+
+### 2. Metrics Collection with Prometheus
+
+**Express.js Metrics Middleware:**
+```javascript
+const prometheus = require('prom-client');
+const express = require('express');
+
+// Create metrics
+const httpRequestsTotal = new prometheus.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'route', 'status_code']
+});
+
+const httpRequestDuration = new prometheus.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.1, 0.5, 1, 2, 5]
+});
+
+const activeConnections = new prometheus.Gauge({
+  name: 'active_connections',
+  help: 'Number of active connections'
+});
+
+const databaseConnectionPool = new prometheus.Gauge({
+  name: 'database_connection_pool_active',
+  help: 'Active database connections in pool'
+});
+
+// Middleware to collect metrics
+const metricsMiddleware = (req, res, next) => {
+  const startTime = Date.now();
+  
+  activeConnections.inc();
+  
+  res.on('finish', () => {
+    const duration = (Date.now() - startTime) / 1000;
+    const route = req.route?.path || req.path;
+    
+    httpRequestsTotal
+      .labels(req.method, route, res.statusCode.toString())
+      .inc();
+    
+    httpRequestDuration
+      .labels(req.method, route, res.statusCode.toString())
+      .observe(duration);
+    
+    activeConnections.dec();
+  });
+  
+  next();
+};
+
+// Custom business metrics
+const orderMetrics = {
+  ordersCreated: new prometheus.Counter({
+    name: 'orders_created_total',
+    help: 'Total number of orders created',
+    labelNames: ['payment_method', 'customer_segment']
+  }),
+  
+  orderValue: new prometheus.Histogram({
+    name: 'order_value_dollars',
+    help: 'Order value in dollars',
+    buckets: [10, 50, 100, 250, 500, 1000]
+  }),
+  
+  inventoryLevel: new prometheus.Gauge({
+    name: 'inventory_level',
+    help: 'Current inventory level',
+    labelNames: ['product_id', 'warehouse']
+  })
+};
+
+// Usage in business logic
+class OrderService {
+  async createOrder(orderData) {
+    try {
+      const order = await this.orderRepository.create(orderData);
+      
+      // Track business metrics
+      orderMetrics.ordersCreated
+        .labels(order.paymentMethod, order.customerSegment)
+        .inc();
+        
+      orderMetrics.orderValue
+        .observe(order.totalAmount);
+      
+      return order;
+    } catch (error) {
+      // Error metrics are tracked automatically by middleware
+      throw error;
+    }
+  }
+}
+
+// Metrics endpoint
+app.use('/metrics', async (req, res) => {
+  try {
+    // Update gauge metrics before serving
+    const dbPool = await db.getPoolStatus();
+    databaseConnectionPool.set(dbPool.activeConnections);
+    
+    res.set('Content-Type', prometheus.register.contentType);
+    res.end(await prometheus.register.metrics());
+  } catch (error) {
+    res.status(500).end(error.message);
+  }
+});
+```
+
+### 3. Distributed Tracing with OpenTelemetry
+
+**OpenTelemetry Setup:**
+```javascript
+const { NodeSDK } = require('@opentelemetry/sdk-node');
+const { Resource } = require('@opentelemetry/resources');
+const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+const { JaegerExporter } = require('@opentelemetry/exporter-jaeger');
+const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+
+// Initialize OpenTelemetry
+const sdk = new NodeSDK({
+  resource: new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: 'user-service',
+    [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
+    [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV
+  }),
+  traceExporter: new JaegerExporter({
+    endpoint: 'http://jaeger:14268/api/traces'
+  }),
+  instrumentations: [
+    getNodeAutoInstrumentations({
+      '@opentelemetry/instrumentation-fs': {
+        enabled: false // Disable filesystem instrumentation
+      }
+    })
+  ]
+});
+
+sdk.start();
+
+// Manual instrumentation
+const { trace, SpanStatusCode } = require('@opentelemetry/api');
+
+class UserService {
+  async getUserWithOrders(userId) {
+    const tracer = trace.getTracer('user-service');
+    
+    return tracer.startActiveSpan('get_user_with_orders', async (span) => {
+      try {
+        span.setAttributes({
+          'user.id': userId,
+          'operation': 'get_user_with_orders'
+        });
+        
+        // Get user data
+        const user = await tracer.startActiveSpan('database.get_user', async (userSpan) => {
+          userSpan.setAttributes({
+            'db.operation': 'SELECT',
+            'db.table': 'users'
+          });
+          
+          const userData = await this.userRepository.findById(userId);
+          userSpan.setStatus({ code: SpanStatusCode.OK });
+          return userData;
+        });
+        
+        if (!user) {
+          span.recordException(new Error('User not found'));
+          span.setStatus({ 
+            code: SpanStatusCode.ERROR, 
+            message: 'User not found' 
+          });
+          throw new Error('User not found');
+        }
+        
+        // Get user orders
+        const orders = await tracer.startActiveSpan('get_user_orders', async (ordersSpan) => {
+          ordersSpan.setAttributes({
+            'user.id': userId,
+            'operation': 'get_orders'
+          });
+          
+          const orderData = await this.orderService.getOrdersByUserId(userId);
+          ordersSpan.setAttributes({
+            'orders.count': orderData.length
+          });
+          
+          return orderData;
+        });
+        
+        span.setAttributes({
+          'user.email': user.email,
+          'orders.count': orders.length,
+          'result.success': true
+        });
+        
+        span.setStatus({ code: SpanStatusCode.OK });
+        return { user, orders };
+        
+      } catch (error) {
+        span.recordException(error);
+        span.setStatus({ 
+          code: SpanStatusCode.ERROR, 
+          message: error.message 
+        });
+        throw error;
+      } finally {
+        span.end();
+      }
+    });
+  }
+}
+```
+
+### Four Golden Signals Dashboard Configuration
+
+**Grafana Dashboard JSON:**
+```json
+{
+  "dashboard": {
+    "title": "Application Golden Signals",
+    "panels": [
+      {
+        "title": "Request Rate (Traffic)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ]
+      },
+      {
+        "title": "Request Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status_code=~\"5..\"}[5m]) / rate(http_requests_total[5m])",
+            "legendFormat": "Error Rate"
+          }
+        ]
+      },
+      {
+        "title": "Saturation (CPU & Memory)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+            "legendFormat": "CPU Usage %"
+          },
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "Memory Usage MB"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
 :::tip Deep Dive: Resources
 - [📄 **The Three Pillars of Observability** by Honeycomb.io](https://www.honeycomb.io/blog/three-pillars-of-observability-logs-metrics-traces)

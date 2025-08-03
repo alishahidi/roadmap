@@ -11,7 +11,44 @@ A senior engineer's responsibility extends beyond writing code to ensuring the e
 
 Automation is the bedrock of modern software operations. It enables speed, reliability, and repeatability.
 
-- **CI/CD (Continuous Integration/Continuous Deployment):** This is the practice of automating the software delivery lifecycle. It's a pipeline that takes code from a developer's machine to production with minimal human intervention.
+### CI/CD Implementation Examples
+
+**CI/CD** automates the software delivery lifecycle from code commit to production deployment.
+
+**GitHub Actions Pipeline Example:**
+```yaml
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    - name: Run tests
+      run: npm test
+    - name: Build application
+      run: npm run build
+    
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to production
+      run: echo "Deploying to production..."
+```
 
 ```mermaid
 graph TD
