@@ -66,6 +66,9 @@ OOP models the real world using objects and classes. It's the dominant paradigm 
 
 #### SOLID Principles with Code Examples
 
+:::details SOLID Principles implementations
+**Click to expand SOLID code examples**
+
 **Single Responsibility Principle (SRP)**
 ```java
 // ❌ Bad: Class has multiple responsibilities
@@ -160,11 +163,16 @@ class NotificationService:
         self._email_sender.send_email(user_email, "Notification", message)
 ```
 
+:::
+
 ### Functional Programming (FP)
 
 FP treats computation as the evaluation of mathematical functions and avoids changing-state and mutable data.
 
 #### Core Concepts with Examples
+
+:::details Functional Programming examples
+**Click to expand FP code examples**
 
 **Pure Functions**
 ```javascript
@@ -235,6 +243,8 @@ public class OrderProcessor {
 - **Composability:** Small, pure functions can be easily combined
 - **Fault Tolerance:** Less shared state means fewer points of failure
 
+:::
+
 :::tip Deep Dive: Resources
 - [📄 **SOLID Principles for C# Developers** (Code-Maze)](https://code-maze.com/solid-principles-csharp/)
 - [▶️ **Functional Programming in 40 Minutes** (Video)](https://www.youtube.com/watch?v=pDbcC-xSat4)
@@ -304,6 +314,9 @@ Security is not a feature; it's a foundational requirement. A senior developer m
 
 - **The OWASP Top 10:** This is the essential checklist for web security. It's a standard awareness document for developers and web application security. It represents a broad consensus about the most critical security risks.
 ### Common Security Vulnerabilities with Examples
+
+:::details Security vulnerability examples
+**Click to expand security code examples**
 
 #### SQL Injection
 An attacker can use a web form or URL parameter to send a malicious SQL query.
@@ -402,6 +415,8 @@ public ResponseEntity<?> register(@Valid @RequestBody UserRegistrationRequest re
 ```
 
 By using parameterized queries and proper input validation, you create multiple layers of defense against common attacks.
+
+:::
 
 :::tip Deep Dive: Resources
 - [📄 **OWASP Top 10** (Official Site)](https://owasp.org/www-project-top-ten/)

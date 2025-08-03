@@ -256,6 +256,989 @@ app.use((error, req, res, next) => {
 
 GraphQL is a query language for your API that gives clients the power to ask for exactly what they need and nothing more. It's a powerful alternative to REST, especially for applications with complex data requirements or diverse clients (e.g., web and mobile).
 
+---
+
+## gRPC (Google Remote Procedure Call)
+
+gRPC is a high-performance, open-source RPC framework that uses HTTP/2 and Protocol Buffers. It's ideal for internal microservice communication and high-throughput systems.
+
+### Protocol Buffers Definition
+
+:::details Protocol Buffers Definition
+**Click to expand Proto file example**
+
+```protobuf
+// user.proto
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "github.com/yourcompany/user-service/api/user/v1";
+option java_package = "com.yourcompany.user.v1";
+option csharp_namespace = "YourCompany.User.V1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// User service definition
+service UserService {
+  // Creates a new user
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  
+  // Gets a user by ID
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  
+  // Updates user information
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  
+  // Deletes a user
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty);
+  
+  // Lists users with pagination
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  
+  // Server streaming: Get user events
+  rpc GetUserEvents(GetUserEventsRequest) returns (stream UserEvent);
+  
+  // Client streaming: Batch create users
+  rpc BatchCreateUsers(stream CreateUserRequest) returns (BatchCreateUsersResponse);
+  
+  // Bidirectional streaming: Real-time user updates
+  rpc StreamUserUpdates(stream UserUpdateRequest) returns (stream UserUpdateResponse);
+}
+
+// Message definitions
+message User {
+  string id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  UserStatus status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  Address address = 8;
+  repeated string roles = 9;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string zip_code = 4;
+  string country = 5;
+}
+
+enum UserStatus {
+  USER_STATUS_UNSPECIFIED = 0;
+  USER_STATUS_ACTIVE = 1;
+  USER_STATUS_INACTIVE = 2;
+  USER_STATUS_SUSPENDED = 3;
+}
+
+// Request/Response messages
+message CreateUserRequest {
+  string email = 1;
+  string first_name = 2;
+  string last_name = 3;
+  Address address = 4;
+}
+
+message CreateUserResponse {
+  User user = 1;
+  string message = 2;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  Address address = 5;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message ListUsersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string filter = 3; // e.g., "status=ACTIVE"
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message UserEvent {
+  string event_id = 1;
+  string user_id = 2;
+  EventType event_type = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  string data = 5; // JSON payload
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_CREATED = 1;
+  EVENT_TYPE_UPDATED = 2;
+  EVENT_TYPE_DELETED = 3;
+  EVENT_TYPE_LOGIN = 4;
+  EVENT_TYPE_LOGOUT = 5;
+}
+
+message GetUserEventsRequest {
+  string user_id = 1;
+  google.protobuf.Timestamp since = 2;
+}
+
+message BatchCreateUsersResponse {
+  repeated CreateUserResponse results = 1;
+  int32 success_count = 2;
+  int32 failure_count = 3;
+}
+
+message UserUpdateRequest {
+  string user_id = 1;
+  string field_name = 2;
+  string field_value = 3;
+}
+
+message UserUpdateResponse {
+  string user_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+```
+
+:::
+
+### gRPC Server Implementation Examples
+
+:::details Go Server Implementation
+**Click to expand Go gRPC server code**
+
+```go
+// server.go
+package main
+
+import (
+    "context"
+    "fmt"
+    "io"
+    "log"
+    "net"
+    "time"
+
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
+    "google.golang.org/protobuf/types/known/emptypb"
+    "google.golang.org/protobuf/types/known/timestamppb"
+
+    pb "github.com/yourcompany/user-service/api/user/v1"
+)
+
+type userServiceServer struct {
+    pb.UnimplementedUserServiceServer
+    users map[string]*pb.User
+}
+
+func newUserServiceServer() *userServiceServer {
+    return &userServiceServer{
+        users: make(map[string]*pb.User),
+    }
+}
+
+func (s *userServiceServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+    // Validation
+    if req.Email == "" {
+        return nil, status.Errorf(codes.InvalidArgument, "email is required")
+    }
+
+    // Check if user already exists
+    for _, user := range s.users {
+        if user.Email == req.Email {
+            return nil, status.Errorf(codes.AlreadyExists, "user with email %s already exists", req.Email)
+        }
+    }
+
+    // Create user
+    userID := fmt.Sprintf("user_%d", time.Now().Unix())
+    user := &pb.User{
+        Id:        userID,
+        Email:     req.Email,
+        FirstName: req.FirstName,
+        LastName:  req.LastName,
+        Status:    pb.UserStatus_USER_STATUS_ACTIVE,
+        CreatedAt: timestamppb.Now(),
+        UpdatedAt: timestamppb.Now(),
+        Address:   req.Address,
+        Roles:     []string{"user"},
+    }
+
+    s.users[userID] = user
+
+    log.Printf("Created user: %s (%s)", user.Id, user.Email)
+
+    return &pb.CreateUserResponse{
+        User:    user,
+        Message: "User created successfully",
+    }, nil
+}
+
+func (s *userServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
+    if req.Id == "" {
+        return nil, status.Errorf(codes.InvalidArgument, "user ID is required")
+    }
+
+    user, exists := s.users[req.Id]
+    if !exists {
+        return nil, status.Errorf(codes.NotFound, "user with ID %s not found", req.Id)
+    }
+
+    return &pb.GetUserResponse{
+        User: user,
+    }, nil
+}
+
+func (s *userServiceServer) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+    pageSize := req.PageSize
+    if pageSize <= 0 || pageSize > 100 {
+        pageSize = 10 // Default page size
+    }
+
+    var users []*pb.User
+    for _, user := range s.users {
+        // Apply filter if provided
+        if req.Filter != "" {
+            // Simple filter implementation
+            if req.Filter == "status=ACTIVE" && user.Status != pb.UserStatus_USER_STATUS_ACTIVE {
+                continue
+            }
+        }
+        users = append(users, user)
+    }
+
+    // Simple pagination
+    start := 0
+    if req.PageToken != "" {
+        // Parse page token (simplified)
+        fmt.Sscanf(req.PageToken, "%d", &start)
+    }
+
+    end := start + int(pageSize)
+    if end > len(users) {
+        end = len(users)
+    }
+
+    var nextPageToken string
+    if end < len(users) {
+        nextPageToken = fmt.Sprintf("%d", end)
+    }
+
+    return &pb.ListUsersResponse{
+        Users:         users[start:end],
+        NextPageToken: nextPageToken,
+        TotalCount:    int32(len(users)),
+    }, nil
+}
+
+// Server streaming example
+func (s *userServiceServer) GetUserEvents(req *pb.GetUserEventsRequest, stream pb.UserService_GetUserEventsServer) error {
+    // Simulate streaming events
+    events := []*pb.UserEvent{
+        {
+            EventId:   "evt_1",
+            UserId:    req.UserId,
+            EventType: pb.EventType_EVENT_TYPE_CREATED,
+            Timestamp: timestamppb.Now(),
+            Data:      `{"action": "user_created"}`,
+        },
+        {
+            EventId:   "evt_2",
+            UserId:    req.UserId,
+            EventType: pb.EventType_EVENT_TYPE_LOGIN,
+            Timestamp: timestamppb.Now(),
+            Data:      `{"ip": "192.168.1.1", "user_agent": "Chrome"}`,
+        },
+    }
+
+    for _, event := range events {
+        if err := stream.Send(event); err != nil {
+            return err
+        }
+        time.Sleep(1 * time.Second) // Simulate real-time events
+    }
+
+    return nil
+}
+
+// Client streaming example
+func (s *userServiceServer) BatchCreateUsers(stream pb.UserService_BatchCreateUsersServer) error {
+    var results []*pb.CreateUserResponse
+    var successCount, failureCount int32
+
+    for {
+        req, err := stream.Recv()
+        if err == io.EOF {
+            // Client finished sending
+            return stream.SendAndClose(&pb.BatchCreateUsersResponse{
+                Results:      results,
+                SuccessCount: successCount,
+                FailureCount: failureCount,
+            })
+        }
+        if err != nil {
+            return err
+        }
+
+        // Process each user creation
+        resp, err := s.CreateUser(context.Background(), req)
+        if err != nil {
+            failureCount++
+            results = append(results, &pb.CreateUserResponse{
+                Message: err.Error(),
+            })
+        } else {
+            successCount++
+            results = append(results, resp)
+        }
+    }
+}
+
+// Bidirectional streaming example
+func (s *userServiceServer) StreamUserUpdates(stream pb.UserService_StreamUserUpdatesServer) error {
+    for {
+        req, err := stream.Recv()
+        if err == io.EOF {
+            return nil
+        }
+        if err != nil {
+            return err
+        }
+
+        // Process update
+        user, exists := s.users[req.UserId]
+        if !exists {
+            stream.Send(&pb.UserUpdateResponse{
+                UserId:       req.UserId,
+                Success:      false,
+                ErrorMessage: "User not found",
+            })
+            continue
+        }
+
+        // Update field (simplified)
+        switch req.FieldName {
+        case "first_name":
+            user.FirstName = req.FieldValue
+        case "last_name":
+            user.LastName = req.FieldValue
+        default:
+            stream.Send(&pb.UserUpdateResponse{
+                UserId:       req.UserId,
+                Success:      false,
+                ErrorMessage: "Invalid field name",
+            })
+            continue
+        }
+
+        user.UpdatedAt = timestamppb.Now()
+
+        stream.Send(&pb.UserUpdateResponse{
+            UserId:  req.UserId,
+            Success: true,
+        })
+    }
+}
+
+func main() {
+    lis, err := net.Listen("tcp", ":50051")
+    if err != nil {
+        log.Fatalf("Failed to listen: %v", err)
+    }
+
+    // Create gRPC server with interceptors
+    s := grpc.NewServer(
+        grpc.UnaryInterceptor(loggingInterceptor),
+        grpc.StreamInterceptor(streamLoggingInterceptor),
+    )
+
+    pb.RegisterUserServiceServer(s, newUserServiceServer())
+
+    log.Printf("gRPC server listening on :50051")
+    if err := s.Serve(lis); err != nil {
+        log.Fatalf("Failed to serve: %v", err)
+    }
+}
+
+// Interceptors for logging and middleware
+func loggingInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+    start := time.Now()
+    
+    log.Printf("gRPC call: %s started", info.FullMethod)
+    resp, err := handler(ctx, req)
+    
+    duration := time.Since(start)
+    if err != nil {
+        log.Printf("gRPC call: %s failed in %v: %v", info.FullMethod, duration, err)
+    } else {
+        log.Printf("gRPC call: %s completed in %v", info.FullMethod, duration)
+    }
+    
+    return resp, err
+}
+
+func streamLoggingInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+    log.Printf("gRPC stream: %s started", info.FullMethod)
+    err := handler(srv, stream)
+    if err != nil {
+        log.Printf("gRPC stream: %s failed: %v", info.FullMethod, err)
+    } else {
+        log.Printf("gRPC stream: %s completed", info.FullMethod)
+    }
+    return err
+}
+```
+
+:::
+
+:::details Node.js Server Implementation
+**Click to expand Node.js gRPC server code**
+
+```javascript
+// server.js
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const path = require('path');
+
+// Load proto file
+const PROTO_PATH = path.join(__dirname, 'user.proto');
+const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+  keepCase: true,
+  longs: String,
+  enums: String,
+  defaults: true,
+  oneofs: true
+});
+
+const userProto = grpc.loadPackageDefinition(packageDefinition).user.v1;
+
+// In-memory user storage
+const users = new Map();
+
+// User service implementation
+const userService = {
+  createUser: (call, callback) => {
+    const request = call.request;
+    
+    // Validation
+    if (!request.email) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'Email is required'
+      });
+    }
+
+    // Check if user already exists
+    for (const user of users.values()) {
+      if (user.email === request.email) {
+        return callback({
+          code: grpc.status.ALREADY_EXISTS,
+          message: `User with email ${request.email} already exists`
+        });
+      }
+    }
+
+    // Create user
+    const userId = `user_${Date.now()}`;
+    const user = {
+      id: userId,
+      email: request.email,
+      first_name: request.first_name,
+      last_name: request.last_name,
+      status: 'USER_STATUS_ACTIVE',
+      created_at: { seconds: Math.floor(Date.now() / 1000) },
+      updated_at: { seconds: Math.floor(Date.now() / 1000) },
+      address: request.address,
+      roles: ['user']
+    };
+
+    users.set(userId, user);
+
+    console.log(`Created user: ${user.id} (${user.email})`);
+
+    callback(null, {
+      user: user,
+      message: 'User created successfully'
+    });
+  },
+
+  getUser: (call, callback) => {
+    const userId = call.request.id;
+    
+    if (!userId) {
+      return callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: 'User ID is required'
+      });
+    }
+
+    const user = users.get(userId);
+    if (!user) {
+      return callback({
+        code: grpc.status.NOT_FOUND,
+        message: `User with ID ${userId} not found`
+      });
+    }
+
+    callback(null, { user });
+  },
+
+  updateUser: (call, callback) => {
+    const request = call.request;
+    const user = users.get(request.id);
+
+    if (!user) {
+      return callback({
+        code: grpc.status.NOT_FOUND,
+        message: `User with ID ${request.id} not found`
+      });
+    }
+
+    // Update user fields
+    if (request.email) user.email = request.email;
+    if (request.first_name) user.first_name = request.first_name;
+    if (request.last_name) user.last_name = request.last_name;
+    if (request.address) user.address = request.address;
+    
+    user.updated_at = { seconds: Math.floor(Date.now() / 1000) };
+
+    callback(null, { user });
+  },
+
+  deleteUser: (call, callback) => {
+    const userId = call.request.id;
+    
+    if (!users.has(userId)) {
+      return callback({
+        code: grpc.status.NOT_FOUND,
+        message: `User with ID ${userId} not found`
+      });
+    }
+
+    users.delete(userId);
+    console.log(`Deleted user: ${userId}`);
+    
+    callback(null, {}); // Empty response
+  },
+
+  listUsers: (call, callback) => {
+    const request = call.request;
+    let pageSize = request.page_size || 10;
+    
+    if (pageSize > 100) pageSize = 100;
+
+    const allUsers = Array.from(users.values());
+    
+    // Simple filter implementation
+    let filteredUsers = allUsers;
+    if (request.filter === 'status=ACTIVE') {
+      filteredUsers = allUsers.filter(user => user.status === 'USER_STATUS_ACTIVE');
+    }
+
+    // Simple pagination
+    const startIndex = request.page_token ? parseInt(request.page_token) : 0;
+    const endIndex = Math.min(startIndex + pageSize, filteredUsers.length);
+    const pageUsers = filteredUsers.slice(startIndex, endIndex);
+
+    const nextPageToken = endIndex < filteredUsers.length ? endIndex.toString() : '';
+
+    callback(null, {
+      users: pageUsers,
+      next_page_token: nextPageToken,
+      total_count: filteredUsers.length
+    });
+  },
+
+  // Server streaming
+  getUserEvents: (call) => {
+    const userId = call.request.user_id;
+    
+    // Simulate streaming events
+    const events = [
+      {
+        event_id: 'evt_1',
+        user_id: userId,
+        event_type: 'EVENT_TYPE_CREATED',
+        timestamp: { seconds: Math.floor(Date.now() / 1000) },
+        data: JSON.stringify({ action: 'user_created' })
+      },
+      {
+        event_id: 'evt_2',
+        user_id: userId,
+        event_type: 'EVENT_TYPE_LOGIN',
+        timestamp: { seconds: Math.floor(Date.now() / 1000) },
+        data: JSON.stringify({ ip: '192.168.1.1', user_agent: 'Chrome' })
+      }
+    ];
+
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < events.length) {
+        call.write(events[index]);
+        index++;
+      } else {
+        clearInterval(interval);
+        call.end();
+      }
+    }, 1000);
+
+    call.on('cancelled', () => {
+      clearInterval(interval);
+      console.log('Client cancelled getUserEvents stream');
+    });
+  },
+
+  // Client streaming
+  batchCreateUsers: (call, callback) => {
+    const results = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    call.on('data', (request) => {
+      // Simulate user creation
+      try {
+        if (!request.email) {
+          throw new Error('Email is required');
+        }
+
+        const userId = `user_${Date.now()}_${Math.random()}`;
+        const user = {
+          id: userId,
+          email: request.email,
+          first_name: request.first_name,
+          last_name: request.last_name,
+          status: 'USER_STATUS_ACTIVE',
+          created_at: { seconds: Math.floor(Date.now() / 1000) },
+          updated_at: { seconds: Math.floor(Date.now() / 1000) },
+          address: request.address,
+          roles: ['user']
+        };
+
+        users.set(userId, user);
+        results.push({ user, message: 'User created successfully' });
+        successCount++;
+      } catch (error) {
+        results.push({ message: error.message });
+        failureCount++;
+      }
+    });
+
+    call.on('end', () => {
+      callback(null, {
+        results,
+        success_count: successCount,
+        failure_count: failureCount
+      });
+    });
+  },
+
+  // Bidirectional streaming
+  streamUserUpdates: (call) => {
+    call.on('data', (request) => {
+      const user = users.get(request.user_id);
+      
+      if (!user) {
+        call.write({
+          user_id: request.user_id,
+          success: false,
+          error_message: 'User not found'
+        });
+        return;
+      }
+
+      // Update field
+      switch (request.field_name) {
+        case 'first_name':
+          user.first_name = request.field_value;
+          break;
+        case 'last_name':
+          user.last_name = request.field_value;
+          break;
+        default:
+          call.write({
+            user_id: request.user_id,
+            success: false,
+            error_message: 'Invalid field name'
+          });
+          return;
+      }
+
+      user.updated_at = { seconds: Math.floor(Date.now() / 1000) };
+
+      call.write({
+        user_id: request.user_id,
+        success: true
+      });
+    });
+
+    call.on('end', () => {
+      call.end();
+    });
+  }
+};
+
+// Create and start server
+function main() {
+  const server = new grpc.Server();
+  
+  server.addService(userProto.UserService.service, userService);
+  
+  const address = '0.0.0.0:50051';
+  server.bindAsync(address, grpc.ServerCredentials.createInsecure(), (err, port) => {
+    if (err) {
+      console.error('Failed to bind server:', err);
+      return;
+    }
+    
+    console.log(`gRPC server listening on ${address}`);
+    server.start();
+  });
+}
+
+main();
+```
+
+:::
+
+### gRPC Client Examples
+
+:::details gRPC Client Examples
+**Click to expand client implementations**
+
+**Go Client:**
+```go
+// client.go
+package main
+
+import (
+    "context"
+    "io"
+    "log"
+    "time"
+
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials/insecure"
+
+    pb "github.com/yourcompany/user-service/api/user/v1"
+)
+
+func main() {
+    // Connect to server
+    conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+    if err != nil {
+        log.Fatalf("Failed to connect: %v", err)
+    }
+    defer conn.Close()
+
+    client := pb.NewUserServiceClient(conn)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+
+    // Unary call example
+    createResp, err := client.CreateUser(ctx, &pb.CreateUserRequest{
+        Email:     "john@example.com",
+        FirstName: "John",
+        LastName:  "Doe",
+        Address: &pb.Address{
+            Street:  "123 Main St",
+            City:    "Springfield",
+            State:   "IL",
+            ZipCode: "62701",
+            Country: "US",
+        },
+    })
+    if err != nil {
+        log.Fatalf("CreateUser failed: %v", err)
+    }
+    log.Printf("Created user: %v", createResp.User)
+
+    // Server streaming example
+    stream, err := client.GetUserEvents(ctx, &pb.GetUserEventsRequest{
+        UserId: createResp.User.Id,
+    })
+    if err != nil {
+        log.Fatalf("GetUserEvents failed: %v", err)
+    }
+
+    for {
+        event, err := stream.Recv()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            log.Fatalf("Failed to receive event: %v", err)
+        }
+        log.Printf("Received event: %v", event)
+    }
+}
+```
+
+**Node.js Client:**
+```javascript
+// client.js
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const path = require('path');
+
+const PROTO_PATH = path.join(__dirname, 'user.proto');
+const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+  keepCase: true,
+  longs: String,
+  enums: String,
+  defaults: true,
+  oneofs: true
+});
+
+const userProto = grpc.loadPackageDefinition(packageDefinition).user.v1;
+const client = new userProto.UserService('localhost:50051', grpc.credentials.createInsecure());
+
+// Unary call
+function createUser() {
+  return new Promise((resolve, reject) => {
+    client.createUser({
+      email: 'jane@example.com',
+      first_name: 'Jane',
+      last_name: 'Smith',
+      address: {
+        street: '456 Oak Ave',
+        city: 'Springfield',
+        state: 'IL',
+        zip_code: '62702',
+        country: 'US'
+      }
+    }, (err, response) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(response);
+      }
+    });
+  });
+}
+
+// Server streaming
+function getUserEvents(userId) {
+  const call = client.getUserEvents({ user_id: userId });
+  
+  call.on('data', (event) => {
+    console.log('Received event:', event);
+  });
+  
+  call.on('end', () => {
+    console.log('Stream ended');
+  });
+  
+  call.on('error', (err) => {
+    console.error('Stream error:', err);
+  });
+}
+
+// Client streaming
+function batchCreateUsers() {
+  return new Promise((resolve, reject) => {
+    const call = client.batchCreateUsers((err, response) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(response);
+      }
+    });
+
+    // Send multiple user creation requests
+    const users = [
+      { email: 'user1@example.com', first_name: 'User', last_name: 'One' },
+      { email: 'user2@example.com', first_name: 'User', last_name: 'Two' },
+      { email: 'user3@example.com', first_name: 'User', last_name: 'Three' }
+    ];
+
+    users.forEach(user => {
+      call.write(user);
+    });
+
+    call.end();
+  });
+}
+
+// Main execution
+async function main() {
+  try {
+    // Create a user
+    const createResponse = await createUser();
+    console.log('Created user:', createResponse.user);
+
+    // Get user events (streaming)
+    getUserEvents(createResponse.user.id);
+
+    // Batch create users
+    const batchResponse = await batchCreateUsers();
+    console.log('Batch create result:', batchResponse);
+
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+main();
+```
+
+:::
+
+### gRPC vs REST vs GraphQL Comparison
+
+| Feature | REST | GraphQL | gRPC |
+|---------|------|---------|------|
+| **Protocol** | HTTP/1.1 | HTTP/1.1 | HTTP/2 |
+| **Data Format** | JSON/XML | JSON | Protocol Buffers |
+| **Performance** | Good | Good | Excellent |
+| **Streaming** | Limited | Subscriptions | Built-in (4 types) |
+| **Type Safety** | No | Schema-based | Strong (Proto) |
+| **Caching** | Excellent | Complex | Limited |
+| **Browser Support** | Native | Native | Limited (grpc-web) |
+| **Learning Curve** | Easy | Medium | Steep |
+| **Best For** | Public APIs | Complex queries | Internal services |
+
+### When to Use gRPC
+
+✅ **Great for:**
+- Internal microservice communication
+- High-performance requirements
+- Real-time streaming data
+- Polyglot environments (multi-language)
+- Strong typing requirements
+
+❌ **Not ideal for:**
+- Public web APIs (limited browser support)
+- Simple CRUD operations
+- When HTTP caching is critical
+- Team unfamiliar with Protocol Buffers
+
 ### GraphQL Schema and Resolvers Examples
 
 **Schema Definition (GraphQL SDL):**
