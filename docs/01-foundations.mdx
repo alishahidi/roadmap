@@ -48,7 +48,8 @@ The Hypertext Transfer Protocol is the language of the web. A deep understanding
 - [▶️ **What happens when you type a URL in your browser?** (Video)](https://www.youtube.com/watch?v=s_h0S8H1mgg)
 - [📄 **An overview of HTTP** (MDN Web Docs)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Overview)
 :::
-:::
+
+---
 
 ## Programming Paradigms
 
@@ -66,8 +67,8 @@ OOP models the real world using objects and classes. It's the dominant paradigm 
 
 #### SOLID Principles with Code Examples
 
-:::details SOLID Principles implementations
-**Click to expand SOLID code examples**
+<details>
+<summary>SOLID Principles implementations</summary>
 
 **Single Responsibility Principle (SRP)**
 ```java
@@ -163,7 +164,7 @@ class NotificationService:
         self._email_sender.send_email(user_email, "Notification", message)
 ```
 
-:::
+</details>
 
 ### Functional Programming (FP)
 
@@ -171,8 +172,8 @@ FP treats computation as the evaluation of mathematical functions and avoids cha
 
 #### Core Concepts with Examples
 
-:::details Functional Programming examples
-**Click to expand FP code examples**
+<details>
+<summary>Functional Programming examples</summary>
 
 **Pure Functions**
 ```javascript
@@ -236,20 +237,19 @@ public class OrderProcessor {
     }
 }
 ```
-
+</details>
 **Why FP Matters for Backend Systems:**
 - **Predictability:** Pure functions are easier to test and debug
 - **Concurrency:** Immutable data eliminates race conditions
 - **Composability:** Small, pure functions can be easily combined
 - **Fault Tolerance:** Less shared state means fewer points of failure
 
-:::
+
 
 :::tip Deep Dive: Resources
 - [📄 **SOLID Principles for C# Developers** (Code-Maze)](https://code-maze.com/solid-principles-csharp/)
 - [▶️ **Functional Programming in 40 Minutes** (Video)](https://www.youtube.com/watch?v=pDbcC-xSat4)
 - [📄 **Martin Fowler on Design Patterns**](https://martinfowler.com/eaaCatalog/)
-:::
 :::
 
 ---
@@ -308,6 +308,8 @@ graph TD
 - [📄 **The Actor Model in 10 Minutes**](https://www.brianstorti.com/the-actor-model/)
 :::
 
+---
+
 ## Core Web Security Fundamentals
 
 Security is not a feature; it's a foundational requirement. A senior developer must proactively identify and mitigate common vulnerabilities.
@@ -315,31 +317,34 @@ Security is not a feature; it's a foundational requirement. A senior developer m
 - **The OWASP Top 10:** This is the essential checklist for web security. It's a standard awareness document for developers and web application security. It represents a broad consensus about the most critical security risks.
 ### Common Security Vulnerabilities with Examples
 
-:::details Security vulnerability examples
-**Click to expand security code examples**
-
+<details>
+<summary>Security vulnerability examples</summary>
 #### SQL Injection
 An attacker can use a web form or URL parameter to send a malicious SQL query.
 
-**Vulnerable Code Examples:**
+##### Node.js - DANGEROUS!
 ```javascript
-// Node.js - DANGEROUS!
+
 const userId = req.query.id; // Attacker sends: "1 OR 1=1; DROP TABLE users; --"
 const query = `SELECT * FROM users WHERE id = ${userId}`;
 db.query(query, (err, results) => { /* This could delete your entire table! */ });
 ```
 
+##### Python - DANGEROUS!
 ```python
-# Python - DANGEROUS!
+
 def get_user(user_id):
     query = f"SELECT * FROM users WHERE id = {user_id}"  # Vulnerable to injection
     cursor.execute(query)
     return cursor.fetchone()
 ```
+</details>
 
-**Safe Implementation with Parameterized Queries:**
+<details>
+<summary>Safe Implementation with Parameterized Queries</summary>
+#### Node.js - SAFE
 ```javascript
-// Node.js - SAFE
+
 const userId = req.query.id;
 const query = 'SELECT * FROM users WHERE id = ?';
 db.query(query, [userId], (err, results) => {
@@ -347,16 +352,18 @@ db.query(query, [userId], (err, results) => {
 });
 ```
 
+
+#### Python - SAFE
 ```python
-# Python - SAFE
+
 def get_user(user_id):
     query = "SELECT * FROM users WHERE id = %s"
     cursor.execute(query, (user_id,))  # Parameterized query prevents injection
     return cursor.fetchone()
 ```
-
+#### C# Entity Framework - SAFE
 ```csharp
-// C# Entity Framework - SAFE
+
 public async Task<User> GetUserAsync(int userId)
 {
     return await _context.Users
@@ -364,6 +371,7 @@ public async Task<User> GetUserAsync(int userId)
         .FirstOrDefaultAsync();
 }
 ```
+</details>
 
 #### Cross-Site Scripting (XSS) Prevention
 ```javascript
@@ -416,11 +424,10 @@ public ResponseEntity<?> register(@Valid @RequestBody UserRegistrationRequest re
 
 By using parameterized queries and proper input validation, you create multiple layers of defense against common attacks.
 
-:::
+
 
 :::tip Deep Dive: Resources
 - [📄 **OWASP Top 10** (Official Site)](https://owasp.org/www-project-top-ten/)
 - [▶️ **Web Security 101** (Video Playlist by Google)](https://www.youtube.com/playlist?list=PL590L5WQmH8dsxxz7ooJAgmijwOz0me20)
 - [📄 **OWASP Cheatsheet Series**](https://cheatsheetseries.owasp.org/)
-:::
 :::

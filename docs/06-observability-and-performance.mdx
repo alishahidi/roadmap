@@ -41,7 +41,9 @@ graph TD
 
 ### 1. Logging Implementation Examples
 
-**Structured Logging with Winston (Node.js):**
+<details>
+<summary>Structured Logging with Winston (Node.js)</summary>
+
 ```javascript
 const winston = require('winston');
 const { ElasticsearchTransport } = require('winston-elasticsearch');
@@ -126,9 +128,13 @@ class UserService {
 }
 ```
 
+</details>
+
 ### 2. Metrics Collection with Prometheus
 
-**Express.js Metrics Middleware:**
+<details>
+<summary>Express.js Metrics Middleware</summary>
+
 ```javascript
 const prometheus = require('prom-client');
 const express = require('express');
@@ -239,9 +245,13 @@ app.use('/metrics', async (req, res) => {
 });
 ```
 
+</details>
+
 ### 3. Distributed Tracing with OpenTelemetry
 
-**OpenTelemetry Setup:**
+<details>
+<summary>OpenTelemetry Setup</summary>
+
 ```javascript
 const { NodeSDK } = require('@opentelemetry/sdk-node');
 const { Resource } = require('@opentelemetry/resources');
@@ -344,9 +354,13 @@ class UserService {
 }
 ```
 
+</details>
+
 ### Four Golden Signals Dashboard Configuration
 
-**Grafana Dashboard JSON:**
+<details>
+<summary>Grafana Dashboard JSON</summary>
+
 ```json
 {
   "dashboard": {
@@ -405,11 +419,12 @@ class UserService {
 }
 ```
 
+</details>
+
 :::tip Deep Dive: Resources
 - [📄 **The Three Pillars of Observability** by Honeycomb.io](https://www.honeycomb.io/blog/three-pillars-of-observability-logs-metrics-traces)
 - [▶️ **What is OpenTelemetry?** (Video)](https://www.youtube.com/watch?v=y-G-iA-i5-Y)
 - [📄 **Prometheus Official Documentation**](https://prometheus.io/docs/introduction/overview/)
-:::
 :::
 
 ---
@@ -483,5 +498,4 @@ graph TD
 :::tip Deep Dive: Resources
 - [▶️ **System Design 101: Scaling and Load Balancers** (Video)](https://www.youtube.com/watch?v=K0Ta65OqQkY)
 - [📄 **What is a CDN?** (Cloudflare)](https://www.cloudflare.com/learning/cdn/what-is-a-cdn/)
-:::
 :::

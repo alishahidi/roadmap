@@ -109,7 +109,9 @@ These are the fundamental **Gang of Four (GoF)** and **Enterprise Patterns** tha
 #### Factory Pattern
 Encapsulates object creation logic, making code more flexible and testable.
 
-**Java Implementation:**
+<details>
+<summary>Java Implementation</summary>
+
 ```java
 // Product interface
 public interface PaymentProcessor {
@@ -163,7 +165,11 @@ PaymentProcessor processor = PaymentProcessorFactory.createProcessor("stripe");
 processor.processPayment(new BigDecimal("99.99"));
 ```
 
-**C# Implementation with Dependency Injection:**
+</details>
+
+<details>
+<summary>C# Implementation with Dependency Injection</summary>
+
 ```csharp
 public interface IPaymentProcessor
 {
@@ -204,10 +210,14 @@ public class PaymentProcessorFactory
 }
 ```
 
+</details>
+
 #### Builder Pattern
 Constructs complex objects step by step, especially useful for objects with many optional parameters.
 
-**Java Implementation:**
+<details>
+<summary>Java Implementation</summary>
+
 ```java
 public class DatabaseConnection {
     private final String host;
@@ -297,12 +307,16 @@ public class DatabaseConnection {
 }
 ```
 
+</details>
+
 ### Structural Patterns
 
 #### Adapter Pattern
 Allows incompatible interfaces to work together.
 
-**Python Implementation:**
+<details>
+<summary>Python Implementation</summary>
+
 ```python
 from abc import ABC, abstractmethod
 from typing import Dict, Any
@@ -359,10 +373,14 @@ notification_service = NotificationService(email_adapter)
 notification_service.notify_user("user@example.com", "Hello, World!")
 ```
 
+</details>
+
 #### Decorator Pattern
 Adds behavior to objects dynamically without altering their structure.
 
-**Node.js/JavaScript Implementation:**
+<details>
+<summary>Node.js/JavaScript Implementation</summary>
+
 ```javascript
 // Base coffee interface
 class Coffee {
@@ -451,12 +469,16 @@ console.log(`${coffee.description()}: $${coffee.cost()}`);
 // Simple coffee, milk, sugar, whip: $3.5
 ```
 
+</details>
+
 ### Behavioral Patterns
 
 #### Observer Pattern
 Defines a one-to-many dependency between objects for event-driven architectures.
 
-**Java Implementation:**
+<details>
+<summary>Java Implementation</summary>
+
 ```java
 import java.util.*;
 
@@ -579,10 +601,14 @@ public class ObserverPatternDemo {
 }
 ```
 
+</details>
+
 #### Strategy Pattern
 Encapsulates algorithms and makes them interchangeable at runtime.
 
-**C# Implementation:**
+<details>
+<summary>C# Implementation</summary>
+
 ```csharp
 public interface IDiscountStrategy
 {
@@ -705,12 +731,16 @@ foreach (var strategy in strategies)
 }
 ```
 
+</details>
+
 ### Enterprise Patterns
 
 #### Repository Pattern
 Encapsulates data access logic and provides a clean separation between business logic and data access.
 
-**C# Implementation with Entity Framework:**
+<details>
+<summary>C# Implementation with Entity Framework</summary>
+
 ```csharp
 public interface IRepository<T> where T : class
 {
@@ -870,10 +900,13 @@ public class UserService
 }
 ```
 
+</details>
+
 #### Unit of Work Pattern
 Maintains a list of objects affected by a business transaction and coordinates writing out changes.
 
-**C# Implementation:**
+<details>
+<summary>C# Implementation</summary>
 ```csharp
 public interface IUnitOfWork : IDisposable
 {
@@ -1009,7 +1042,7 @@ public class OrderService
     }
 }
 ```
-
+</details>
 ```mermaid
 graph TD
     subgraph "Creational Patterns"
