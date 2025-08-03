@@ -41,7 +41,8 @@ GET /getUserOrders?userId=123
 
 ### Complete REST API Implementation Examples
 
-**Node.js/Express Example:**
+<details>
+<summary>Node.js/Express Example:</summary>
 ```javascript
 const express = require('express');
 const app = express();
@@ -131,8 +132,10 @@ app.get('/api/v1/users', UserController.getAllUsers);
 app.post('/api/v1/users', UserController.createUser);
 app.patch('/api/v1/users/:id', UserController.updateUser);
 ```
+</details>
 
-**Java Spring Boot Example:**
+<details>
+<summary>Java Spring Boot Example</summary>
 ```java
 @RestController
 @RequestMapping("/api/v1/users")
@@ -195,6 +198,7 @@ public class UserController {
     }
 }
 ```
+</details>
 
 ### HTTP Status Codes in Practice
 
@@ -248,7 +252,6 @@ app.use((error, req, res, next) => {
 - [📄 **How to Design a Great API** (FreeCodeCamp)](https://www.freecodecamp.org/news/how-to-design-a-great-api-with-these-10-api-design-best-practices/)
 - [📄 **OpenAPI Specification**](https://swagger.io/specification/)
 :::
-:::
 
 ---
 
@@ -264,8 +267,8 @@ gRPC is a high-performance, open-source RPC framework that uses HTTP/2 and Proto
 
 ### Protocol Buffers Definition
 
-:::details Protocol Buffers Definition
-**Click to expand Proto file example**
+<details>
+<summary>Protocol Buffers Definition</summary>
 
 ```protobuf
 // user.proto
@@ -425,11 +428,12 @@ message UserUpdateResponse {
 }
 ```
 
-:::
+</details>
 
 ### gRPC Server Implementation Examples
 
-:::details Go Server Implementation
+<details>
+<summary>Go Server Implementation</summary>
 **Click to expand Go gRPC server code**
 
 ```go
@@ -716,9 +720,10 @@ func streamLoggingInterceptor(srv interface{}, stream grpc.ServerStream, info *g
 }
 ```
 
-:::
+</details>
 
-:::details Node.js Server Implementation
+<details>
+<summary>Node.js Server Implementation</summary>
 **Click to expand Node.js gRPC server code**
 
 ```javascript
@@ -1025,190 +1030,7 @@ function main() {
 main();
 ```
 
-:::
-
-### gRPC Client Examples
-
-:::details gRPC Client Examples
-**Click to expand client implementations**
-
-**Go Client:**
-```go
-// client.go
-package main
-
-import (
-    "context"
-    "io"
-    "log"
-    "time"
-
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/credentials/insecure"
-
-    pb "github.com/yourcompany/user-service/api/user/v1"
-)
-
-func main() {
-    // Connect to server
-    conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        log.Fatalf("Failed to connect: %v", err)
-    }
-    defer conn.Close()
-
-    client := pb.NewUserServiceClient(conn)
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
-
-    // Unary call example
-    createResp, err := client.CreateUser(ctx, &pb.CreateUserRequest{
-        Email:     "john@example.com",
-        FirstName: "John",
-        LastName:  "Doe",
-        Address: &pb.Address{
-            Street:  "123 Main St",
-            City:    "Springfield",
-            State:   "IL",
-            ZipCode: "62701",
-            Country: "US",
-        },
-    })
-    if err != nil {
-        log.Fatalf("CreateUser failed: %v", err)
-    }
-    log.Printf("Created user: %v", createResp.User)
-
-    // Server streaming example
-    stream, err := client.GetUserEvents(ctx, &pb.GetUserEventsRequest{
-        UserId: createResp.User.Id,
-    })
-    if err != nil {
-        log.Fatalf("GetUserEvents failed: %v", err)
-    }
-
-    for {
-        event, err := stream.Recv()
-        if err == io.EOF {
-            break
-        }
-        if err != nil {
-            log.Fatalf("Failed to receive event: %v", err)
-        }
-        log.Printf("Received event: %v", event)
-    }
-}
-```
-
-**Node.js Client:**
-```javascript
-// client.js
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
-const path = require('path');
-
-const PROTO_PATH = path.join(__dirname, 'user.proto');
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true
-});
-
-const userProto = grpc.loadPackageDefinition(packageDefinition).user.v1;
-const client = new userProto.UserService('localhost:50051', grpc.credentials.createInsecure());
-
-// Unary call
-function createUser() {
-  return new Promise((resolve, reject) => {
-    client.createUser({
-      email: 'jane@example.com',
-      first_name: 'Jane',
-      last_name: 'Smith',
-      address: {
-        street: '456 Oak Ave',
-        city: 'Springfield',
-        state: 'IL',
-        zip_code: '62702',
-        country: 'US'
-      }
-    }, (err, response) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(response);
-      }
-    });
-  });
-}
-
-// Server streaming
-function getUserEvents(userId) {
-  const call = client.getUserEvents({ user_id: userId });
-  
-  call.on('data', (event) => {
-    console.log('Received event:', event);
-  });
-  
-  call.on('end', () => {
-    console.log('Stream ended');
-  });
-  
-  call.on('error', (err) => {
-    console.error('Stream error:', err);
-  });
-}
-
-// Client streaming
-function batchCreateUsers() {
-  return new Promise((resolve, reject) => {
-    const call = client.batchCreateUsers((err, response) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(response);
-      }
-    });
-
-    // Send multiple user creation requests
-    const users = [
-      { email: 'user1@example.com', first_name: 'User', last_name: 'One' },
-      { email: 'user2@example.com', first_name: 'User', last_name: 'Two' },
-      { email: 'user3@example.com', first_name: 'User', last_name: 'Three' }
-    ];
-
-    users.forEach(user => {
-      call.write(user);
-    });
-
-    call.end();
-  });
-}
-
-// Main execution
-async function main() {
-  try {
-    // Create a user
-    const createResponse = await createUser();
-    console.log('Created user:', createResponse.user);
-
-    // Get user events (streaming)
-    getUserEvents(createResponse.user.id);
-
-    // Batch create users
-    const batchResponse = await batchCreateUsers();
-    console.log('Batch create result:', batchResponse);
-
-  } catch (error) {
-    console.error('Error:', error);
-  }
-}
-
-main();
-```
-
-:::
+</details>
 
 ### gRPC vs REST vs GraphQL Comparison
 
@@ -1506,7 +1328,6 @@ sequenceDiagram
 - [▶️ **GraphQL Full Course** (YouTube)](https://www.youtube.com/watch?v=ed8SzALpx1Q)
 - [📄 **Apollo GraphQL Platform**](https://www.apollographql.com/)
 :::
-:::
 
 ---
 
@@ -1543,7 +1364,9 @@ sequenceDiagram
 
 ### JWT Implementation Examples
 
-**JWT Creation and Validation (Node.js):**
+<details>
+<summary>JWT Creation and Validation (Node.js)</summary>
+
 ```javascript
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -1683,7 +1506,11 @@ app.delete('/api/users/:id', authenticateToken, requireRoles('admin'), (req, res
 });
 ```
 
-**C# JWT Implementation:**
+</details>
+
+<details>
+<summary>C# JWT Implementation</summary>
+
 ```csharp
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -1792,11 +1619,12 @@ public async Task<IActionResult> DeleteUser(int id)
 }
 ```
 
+</details>
+
 :::tip Deep Dive: Resources
 - [📄 **OAuth 2.0 Simplified**](https://www.oauth.com/)
 - [📄 **JWT.io Introduction**](https://jwt.io/introduction)
 - [📄 **API Security Checklist** (OWASP)](https://cheatsheetseries.owasp.org/API_Security_Cheat_Sheet.html)
-:::
 :::
 
 ---
@@ -1835,7 +1663,9 @@ graph TD
 
 ### Comprehensive API Testing Examples
 
-**Unit Testing with Mocking (Jest/Node.js):**
+<details>
+<summary>Unit Testing with Mocking (Jest/Node.js)</summary>
+
 ```javascript
 // userController.test.js
 const request = require('supertest');
@@ -1936,7 +1766,11 @@ describe('User API Endpoints', () => {
 });
 ```
 
-**Integration Testing (Database + API):**
+</details>
+
+<details>
+<summary>Integration Testing (Database + API)</summary>
+
 ```javascript
 // integration/userApi.test.js
 const request = require('supertest');
@@ -1974,7 +1808,11 @@ describe('User API Integration Tests', () => {
 });
 ```
 
-**Contract Testing with Pact (Consumer Side):**
+</details>
+
+<details>
+<summary>Contract Testing with Pact (Consumer Side)</summary>
+
 ```javascript
 // userApiPact.test.js
 const { Pact } = require('@pact-foundation/pact');
@@ -2034,7 +1872,11 @@ describe('User API Contract Tests', () => {
 });
 ```
 
-**End-to-End API Testing (with authentication):**
+</details>
+
+<details>
+<summary>End-to-End API Testing (with authentication)</summary>
+
 ```javascript
 // e2e/userFlow.test.js
 const request = require('supertest');
@@ -2098,7 +1940,11 @@ describe('User Management E2E Flow', () => {
 });
 ```
 
-**Load Testing with Artillery:**
+</details>
+
+<details>
+<summary>Load Testing with Artillery</summary>
+
 ```yaml
 # artillery-config.yml
 config:
@@ -2134,9 +1980,13 @@ scenarios:
           url: '/api/users?limit=20'
 ```
 
+</details>
+
 ### API Documentation & Testing Tools
 
-**OpenAPI/Swagger Documentation:**
+<details>
+<summary>OpenAPI/Swagger Documentation</summary>
+
 ```yaml
 # openapi.yml
 openapi: 3.0.3
@@ -2274,7 +2124,11 @@ security:
   - bearerAuth: []
 ```
 
-**Newman (Postman CLI) Configuration:**
+</details>
+
+<details>
+<summary>Newman (Postman CLI) Configuration</summary>
+
 ```json
 {
   "info": {
@@ -2336,7 +2190,11 @@ security:
 }
 ```
 
-**Running API Tests in CI/CD:**
+</details>
+
+<details>
+<summary>Running API Tests in CI/CD</summary>
+
 ```bash
 # Install Newman globally
 npm install -g newman
@@ -2352,6 +2210,8 @@ newman run user-api-tests.json \
   --data test-data.csv \
   --iteration-count 10
 ```
+
+</details>
 
 :::tip Deep Dive: Resources
 - [📄 **The Practical Test Pyramid** by Martin Fowler](https://martinfowler.com/articles/practical-test-pyramid.html)
