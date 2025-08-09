@@ -54,6 +54,19 @@ const config = {
     ],
   ],
 
+  plugins: [
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'guides',
+        path: 'guides',
+        routeBasePath: 'guides',
+        sidebarPath: './sidebars-guides.js',
+        editUrl: 'https://github.com/alishahidi/roadmap/tree/main/',
+      },
+    ],
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -70,6 +83,13 @@ const config = {
             sidebarId: 'roadmapSidebar',
             position: 'left',
             label: 'The Roadmap',
+          },
+          {
+            type: 'docSidebar',
+            sidebarId: 'guidesSidebar',
+            docsPluginId: 'guides',
+            position: 'left',
+            label: 'Guides',
           },
           {
             href: 'https://github.com/alishahidi/roadmap',
@@ -90,6 +110,12 @@ const config = {
               { label: 'Data & Persistence', to: '/docs/data-and-persistence' },
               { label: 'Deployment & Operations', to: '/docs/deployment-and-operations' },
               { label: 'Observability & Performance', to: '/docs/observability-and-performance' },
+            ],
+          },
+          {
+            title: 'Guides',
+            items: [
+              { label: 'DDD in C#', to: '/guides/ddd-csharp' },
             ],
           },
           {
